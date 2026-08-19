@@ -63,17 +63,19 @@ lib/
 
 ## Fases
 
-### Fase 0 — Higiene (antes de tocar features)
+### Fase 0 — Higiene (antes de tocar features) — ✅ completada
 
 Barato ahora, caro después.
 
-- [ ] **`git init` + primer commit.** Nada está versionado todavía. Es el mayor
+- [x] **`git init` + primer commit.** Nada está versionado todavía. Es el mayor
       riesgo del proyecto ahora mismo.
-- [ ] Arreglar `test/widget_test.dart`: referencia `MyApp`, la clase es `MergedApp`.
-      Es el único **error** de `flutter analyze`.
-- [ ] Limpiar 3 warnings de null-checks muertos en `auth_service.dart:46,106,111`
+- [x] Sustituir `test/widget_test.dart` (era el test del contador de la plantilla)
+      por un smoke test real de arranque sin sesión, mockeando el MethodChannel
+      de flutter_secure_storage.
+- [x] Limpiar 3 warnings de null-checks muertos en `auth_service.dart:46,106,111`
       (en flutter_appauth 12 esos valores ya no son nullable).
-- [ ] Cambiar `applicationId` de `com.example.merged_app` a uno real. No afecta al
+- [x] Cambiar `applicationId` de `com.example.merged_app` a `dev.merged.app`
+      (también los bundle id de iOS y macOS). No afecta al
       login: el redirect (`dev.merged.app://callback`) es independiente del
       applicationId. Renombrar el paquete más adelante es mucho más molesto.
 
