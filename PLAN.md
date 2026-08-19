@@ -72,9 +72,27 @@ No hacen falta llamadas extra: son los propios eventos con
 4. **Proyectos.** Aquellos donde el usuario es miembro.
 5. **Ramas creadas.** Derivadas del feed de eventos.
 
-**Home híbrida:** la actividad ocupa el cuerpo; arriba, una franja compacta de
-"requiere tu atención" (MRs abiertos propios, todos pendientes) que **se oculta
-cuando está vacía** en lugar de mostrar un hueco.
+**Home híbrida:** la actividad ocupa el cuerpo; los pendientes viven en una
+**campana con contador** en la barra superior.
+
+### La campana
+
+Responde a una sola pregunta: **¿me están esperando?**
+
+- **Cuenta:** todos pendientes + MRs abiertos donde el usuario es reviewer o
+  asignado, **deduplicados** por `TodoItem.dedupeKey` / `web_url` (un mismo MR
+  llega por las dos vías).
+- **No cuenta** los MRs abiertos propios: son trabajo en curso, no algo que
+  bloquee. Van al resumen como un contador aparte.
+- **El cero se muestra**, en gris y con el `0` visible. Es deliberado: la
+  convención habitual de ocultar el badge en cero haría dudar entre "no tengo
+  nada" y "esto no ha cargado".
+- **Sin sección vacía en el cuerpo.** La campana ya comunica el estado; una
+  franja de "sin pendientes" diría lo mismo dos veces y empujaría el feed hacia
+  abajo todos los días.
+- **Fricción asumida:** una campana sugiere que puedes despachar lo que hay
+  dentro, y la v0.1 es de solo lectura. Al tocar se abre la lista y cada
+  elemento lleva a "Abrir en GitLab".
 
 > Los estados vacíos son diseño de primera clase, no un caso borde: en la cuenta
 > de desarrollo varias secciones estarán vacías a diario.
@@ -130,6 +148,7 @@ lib/
 
 - [ ] Riverpod y estructura de `features/`
 - [ ] Pantalla de resumen con los contadores
+- [ ] Campana con contador de pendientes deduplicados
 - [ ] Feed de actividad con paginación (hay más de 100 eventos)
 - [ ] Detalle de push → commits reales vía `compare`
 - [ ] Pull to refresh y los cuatro estados: cargando, vacío, error, sin conexión
