@@ -6,16 +6,21 @@ enum PushAction { created, pushed, removed, unknown }
 
 /// Un evento de `/events`.
 ///
+/// No todos son pushes: el feed trae también `opened` (un MR abierto) y
+/// `joined`. Por eso `pushData` es opcional y existe `isPush`.
+///
 /// Ojo: el payload trae `project_id` pero **no** el nombre del proyecto, así
 /// que la UI necesita resolverlo contra la lista de proyectos.
-class PushEvent {
-  const PushEvent({
+class ActivityEvent {
+  const ActivityEvent({
     required this.id,
     required this.projectId,
     required this.actionName,
     required this.createdAt,
     required this.author,
     this.pushData,
+    this.targetTitle,
+    this.targetType,
   });
 
   final int id;
@@ -27,9 +32,16 @@ class PushEvent {
   final GitlabUser? author;
   final PushData? pushData;
 
+  /// Título del objeto afectado en los eventos que no son push (el título del
+  /// MR en un `opened`, por ejemplo).
+  final String? targetTitle;
+
+  /// "MergeRequest", "Issue"… Nulo en los pushes, que apuntan al proyecto.
+  final String? targetType;
+
   bool get isPush => pushData != null;
 
-  factory PushEvent.fromJson(Map<String, dynamic> json) => PushEvent(
+  factory ActivityEvent.fromJson(Map<String, dynamic> json) => ActivityEvent(
     id: json['id'] as int,
     projectId: json['project_id'] as int? ?? 0,
     actionName: json['action_name'] as String? ?? '',
@@ -42,6 +54,8 @@ class PushEvent {
     pushData: json['push_data'] is Map<String, dynamic>
         ? PushData.fromJson(json['push_data'] as Map<String, dynamic>)
         : null,
+    targetTitle: json['target_title'] as String?,
+    targetType: json['target_type'] as String?,
   );
 }
 

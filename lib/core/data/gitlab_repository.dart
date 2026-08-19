@@ -2,7 +2,7 @@ import '../api/gitlab_client.dart';
 import '../models/gitlab_project.dart';
 import '../models/gitlab_user.dart';
 import '../models/merge_request_summary.dart';
-import '../models/push_event.dart';
+import '../models/activity_event.dart';
 import '../models/repo_commit.dart';
 import '../models/todo_item.dart';
 
@@ -45,13 +45,46 @@ class GitlabRepository {
   }
 
   /// Una página del feed de actividad.
-  Future<Page<PushEvent>> events({int page = 1, int perPage = 30}) =>
+  Future<Page<ActivityEvent>> events({int page = 1, int perPage = 30}) =>
       _client.getPage(
         '/events',
         page: page,
         perPage: perPage,
-        parse: PushEvent.fromJson,
+        parse: ActivityEvent.fromJson,
       );
+
+  /// Eventos posteriores a una fecha, siguiendo la paginación hasta un tope.
+  ///
+  /// Alimenta los contadores del resumen. Se usa el parámetro `after` de la
+  /// API (ISO 8601) para que la ventana sea real y no "lo que haya cargado el
+  /// feed", que daría un número distinto según cuánto hubiera desplazado el
+  /// usuario.
+  Future<List<ActivityEvent>> eventsSince(
+    DateTime since, {
+    int maxPages = 4,
+    int perPage = 100,
+  }) async {
+    final all = <ActivityEvent>[];
+    int? page = 1;
+    var guard = 0;
+    while (page != null && guard++ < maxPages) {
+      final result = await _client.getPage(
+        '/events',
+        query: {'after': _isoDate(since)},
+        page: page,
+        perPage: perPage,
+        parse: ActivityEvent.fromJson,
+      );
+      all.addAll(result.items);
+      page = result.nextPage;
+    }
+    return all;
+  }
+
+  static String _isoDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   /// Commits reales de un push.
   ///
