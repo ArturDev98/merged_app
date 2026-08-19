@@ -58,5 +58,14 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Necesario para "Abrir en GitLab". Desde targetSdk 30 Android filtra
+             qué paquetes ve la app, y sin declarar esto url_launcher no
+             encuentra ningún navegador: launchUrl devuelve false y el enlace
+             no se abre. En una app de solo lectura eso deja al usuario sin
+             salida hacia GitLab. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>
