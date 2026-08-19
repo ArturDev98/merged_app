@@ -202,6 +202,67 @@ Future<String> runApiSmokeTest() async {
     return page;
   });
 
+  // Claves reales de cada payload, para modelar sobre lo que devuelve la API
+  // y no sobre lo que promete la documentación.
+  line('--- forma de los payloads ---');
+
+  void dumpKeys(String label, Map<String, dynamic> json) {
+    final keys = json.keys.toList()..sort();
+    line('$label: ${keys.join(", ")}');
+  }
+
+  await step('claves /user', () async {
+    dumpKeys('user', await client.getOne('/user', parse: (j) => j));
+    return true;
+  });
+
+  await step('claves /projects', () async {
+    final page = await client.getPage(
+      '/projects',
+      query: {'membership': true},
+      perPage: 1,
+      parse: (json) => json,
+    );
+    if (page.items.isNotEmpty) dumpKeys('project', page.items.first);
+    return true;
+  });
+
+  await step('claves /events', () async {
+    final page = await client.getPage(
+      '/events',
+      query: {'action': 'pushed'},
+      perPage: 1,
+      parse: (json) => json,
+    );
+    if (page.items.isNotEmpty) {
+      dumpKeys('event', page.items.first);
+      final push = page.items.first['push_data'];
+      if (push is Map<String, dynamic>) dumpKeys('  push_data', push);
+      final author = page.items.first['author'];
+      if (author is Map<String, dynamic>) dumpKeys('  author', author);
+    }
+    return true;
+  });
+
+  await step('claves /merge_requests', () async {
+    final page = await client.getPage(
+      '/merge_requests',
+      query: {'scope': 'created_by_me', 'state': 'all'},
+      perPage: 1,
+      parse: (json) => json,
+    );
+    if (page.items.isNotEmpty) {
+      dumpKeys('merge_request', page.items.first);
+      final mr = page.items.first;
+      line(
+        '  muestra: !${mr['iid']} "${mr['title']}" '
+        'state=${mr['state']} draft=${mr['draft']} '
+        'pipeline=${mr['head_pipeline']?['status'] ?? "(sin head_pipeline)"}',
+      );
+    }
+    return true;
+  });
+
   line('--- fin ---');
   return report.toString();
 }

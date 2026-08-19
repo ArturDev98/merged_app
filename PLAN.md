@@ -44,6 +44,17 @@ commits** (id, título, autor, fecha). Verificado en la documentación.
 Así que: el feed cuesta **una** llamada, y los commits reales de un push cuestan
 **una más, solo al tocarlo**. Nada de N+1 al pintar la lista.
 
+### Dos huecos en los payloads (medidos)
+
+- **Los eventos no traen el nombre del proyecto, solo `project_id`.** Pintar el
+  feed con el nombre sería un N+1. Solución: cargar una vez
+  `/projects?membership=true&simple=true` (11 elementos) y resolver en local.
+  La lista de proyectos deja de ser solo una pantalla y pasa a ser también
+  tabla de búsqueda.
+- **La lista de merge requests no incluye `head_pipeline`.** Comprobado sobre un
+  MR real. El estado del pipeline solo está en el detalle
+  (`/projects/:id/merge_requests/:iid`), así que la lista no debe prometerlo.
+
 ### Ramas creadas
 
 No hacen falta llamadas extra: son los propios eventos con
@@ -56,8 +67,8 @@ No hacen falta llamadas extra: son los propios eventos con
 1. **Resumen (el "informe").** Pantalla de entrada: contadores del periodo
    —pushes, commits, ramas creadas, proyectos, MRs abiertos— y accesos al resto.
 2. **Actividad.** Feed de pushes. Al tocar uno, sus commits reales vía `compare`.
-3. **Merge requests.** Creados por mí / asignados / a revisar. Con estado de
-   pipeline y draft.
+3. **Merge requests.** Creados por mí / asignados / a revisar, con estado de
+   draft. El pipeline solo en el detalle (ver más abajo).
 4. **Proyectos.** Aquellos donde el usuario es miembro.
 5. **Ramas creadas.** Derivadas del feed de eventos.
 
@@ -112,7 +123,7 @@ lib/
       vez; si el refresh falla, cierra sesión
 - [x] Paginación por cabeceras (`x-next-page`, `x-total` tratada como opcional)
 - [x] Smoke test contra la cuenta real: los scopes alcanzan, ningún 403
-- [ ] Modelos a partir de los payloads reales
+- [x] Modelos a partir de los payloads reales
 - [ ] Repositorios por superficie (actividad, MRs, proyectos)
 
 ### Fase 2 — Resumen + Actividad
@@ -126,7 +137,7 @@ lib/
 
 ### Fase 3 — Merge requests y proyectos
 
-- [ ] Lista de MRs por scope, con pipeline y draft
+- [ ] Lista de MRs por scope, con draft (el pipeline va en el detalle)
 - [ ] Detalle de MR
 - [ ] Lista de proyectos
 - [ ] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
