@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/api/api_smoke_test.dart';
 import 'core/auth/auth_service.dart';
 
 void main() {
@@ -31,6 +32,8 @@ class LoginTestScreen extends StatefulWidget {
 class _LoginTestScreenState extends State<LoginTestScreen> {
   bool _loading = false;
   bool _loggedIn = false;
+  bool _running = false;
+  String? _report;
   String? _tokenPreview;
   String? _error;
 
@@ -75,12 +78,26 @@ class _LoginTestScreenState extends State<LoginTestScreen> {
     }
   }
 
+  Future<void> _handleSmokeTest() async {
+    setState(() {
+      _running = true;
+      _report = null;
+    });
+    final report = await runApiSmokeTest();
+    if (!mounted) return;
+    setState(() {
+      _running = false;
+      _report = report;
+    });
+  }
+
   Future<void> _handleLogout() async {
     await AuthService.instance.logout();
     if (!mounted) return;
     setState(() {
       _loggedIn = false;
       _tokenPreview = null;
+      _report = null;
     });
   }
 
@@ -88,7 +105,7 @@ class _LoginTestScreenState extends State<LoginTestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Merged — Test de Auth')),
-      body: Center(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -132,6 +149,33 @@ class _LoginTestScreenState extends State<LoginTestScreen> {
                   onPressed: _handleLogin,
                   child: const Text('Iniciar sesión con GitLab'),
                 ),
+              if (_loggedIn && !_loading) ...[
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: _running ? null : _handleSmokeTest,
+                  child: Text(
+                    _running ? 'Ejecutando…' : 'Ejecutar diagnóstico API',
+                  ),
+                ),
+              ],
+              if (_report != null) ...[
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    _report!,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

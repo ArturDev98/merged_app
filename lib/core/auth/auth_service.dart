@@ -84,10 +84,13 @@ class AuthService {
 
     if (!isExpired) return accessToken;
 
-    return _refreshAccessToken();
+    return refreshAccessToken();
   }
 
-  Future<String?> _refreshAccessToken() async {
+  /// Fuerza un refresh sin mirar la expiración local. La usa el interceptor
+  /// HTTP ante un 401: el token puede seguir vigente en el reloj y haber sido
+  /// revocado en el servidor.
+  Future<String?> refreshAccessToken() async {
     final refreshToken = await _storage.read(key: _keyRefreshToken);
     if (refreshToken == null) return null;
 
