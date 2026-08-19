@@ -10,8 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:merged_app/main.dart';
 
-const _secureStorageChannel =
-    MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+const _secureStorageChannel = MethodChannel(
+  'plugins.it_nomads.com/flutter_secure_storage',
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

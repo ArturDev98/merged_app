@@ -31,12 +31,11 @@ Future<String> runApiSmokeTest() async {
   line('--- Smoke test API GitLab ---');
 
   await step('GET /user', () async {
-    final user = await client.getOne(
-      '/user',
-      parse: (json) => json,
+    final user = await client.getOne('/user', parse: (json) => json);
+    line(
+      'GET /user -> @${user['username']} (id ${user['id']}, '
+      '${user['name']})',
     );
-    line('GET /user -> @${user['username']} (id ${user['id']}, '
-        '${user['name']})');
     return user;
   });
 
@@ -47,9 +46,11 @@ Future<String> runApiSmokeTest() async {
       perPage: 100,
       parse: (json) => json,
     );
-    line('GET /todos -> ${page.items.length} en esta página, '
-        'total=${page.total ?? "(sin cabecera x-total)"}, '
-        'siguiente=${page.nextPage ?? "-"}');
+    line(
+      'GET /todos -> ${page.items.length} en esta página, '
+      'total=${page.total ?? "(sin cabecera x-total)"}, '
+      'siguiente=${page.nextPage ?? "-"}',
+    );
 
     final byAction = <String, int>{};
     final byType = <String, int>{};
@@ -74,8 +75,10 @@ Future<String> runApiSmokeTest() async {
         parse: (json) => json,
       );
       mrsByScope[scope] = page.items.cast<Map<String, dynamic>>();
-      line('GET /merge_requests?scope=$scope -> ${page.items.length}, '
-          'total=${page.total ?? "-"}, siguiente=${page.nextPage ?? "-"}');
+      line(
+        'GET /merge_requests?scope=$scope -> ${page.items.length}, '
+        'total=${page.total ?? "-"}, siguiente=${page.nextPage ?? "-"}',
+      );
       return page;
     });
   }
@@ -91,12 +94,16 @@ Future<String> runApiSmokeTest() async {
     final degraded = page.items
         .where((e) => (e['push_data']?['commit_count'] as int? ?? 0) == 0)
         .length;
-    line('  eventos degradados (commit_count=0): $degraded '
-        'de ${page.items.length}');
+    line(
+      '  eventos degradados (commit_count=0): $degraded '
+      'de ${page.items.length}',
+    );
     if (page.items.isNotEmpty) {
       final first = page.items.first;
-      line('  ejemplo: ${first['push_data']?['ref']} — '
-          '${first['push_data']?['commit_title']}');
+      line(
+        '  ejemplo: ${first['push_data']?['ref']} — '
+        '${first['push_data']?['commit_title']}',
+      );
     }
     return page;
   });
@@ -115,8 +122,85 @@ Future<String> runApiSmokeTest() async {
       .whereType<String>()
       .toSet();
   final overlap = todoMrUrls.intersection(reviewUrls);
-  line('SOLAPAMIENTO todos(MergeRequest)=${todoMrUrls.length} vs '
-      'reviews_for_me=${reviewUrls.length} -> ${overlap.length} repetidos');
+  line(
+    'SOLAPAMIENTO todos(MergeRequest)=${todoMrUrls.length} vs '
+    'reviews_for_me=${reviewUrls.length} -> ${overlap.length} repetidos',
+  );
+
+  // Segunda tanda: la primera salió vacía en todos y MRs mientras /events venía
+  // lleno. Antes de rediseñar la home hay que saber si esta cuenta simplemente
+  // no tiene nada abierto hoy, o si directamente no usa merge requests.
+  line('--- ¿qué contiene realmente esta cuenta? ---');
+
+  await step('GET /projects?membership=true', () async {
+    final page = await client.getPage(
+      '/projects',
+      query: {'membership': true, 'simple': true},
+      perPage: 1,
+      parse: (json) => json,
+    );
+    line('proyectos donde soy miembro -> ${page.total ?? "(sin x-total)"}');
+    return page;
+  });
+
+  for (final scope in ['created_by_me', 'assigned_to_me', 'reviews_for_me']) {
+    await step('GET /merge_requests?scope=$scope&state=all', () async {
+      final page = await client.getPage(
+        '/merge_requests',
+        query: {'scope': scope, 'state': 'all'},
+        perPage: 1,
+        parse: (json) => json,
+      );
+      line(
+        'MRs históricos ($scope, cualquier estado) -> '
+        '${page.total ?? "(sin x-total)"}',
+      );
+      return page;
+    });
+  }
+
+  await step('GET /todos?state=all', () async {
+    final page = await client.getPage(
+      '/todos',
+      query: {'state': 'all'},
+      perPage: 1,
+      parse: (json) => json,
+    );
+    line(
+      'todos históricos (pending + done) -> '
+      '${page.total ?? "(sin x-total)"}',
+    );
+    return page;
+  });
+
+  // Sin filtro de acción: dice de qué está hecha su actividad real, que es
+  // la única fuente que sí trae datos.
+  await step('GET /events (sin filtro)', () async {
+    final page = await client.getPage(
+      '/events',
+      perPage: 100,
+      parse: (json) => json,
+    );
+    final byAction = <String, int>{};
+    final byTarget = <String, int>{};
+    for (final e in page.items) {
+      final a = e['action_name'] as String? ?? '?';
+      byAction[a] = (byAction[a] ?? 0) + 1;
+      final t = e['target_type'] as String? ?? '(sin target)';
+      byTarget[t] = (byTarget[t] ?? 0) + 1;
+    }
+    line(
+      'eventos recientes -> ${page.items.length} '
+      '(siguiente=${page.nextPage ?? "-"})',
+    );
+    line('  por action_name: $byAction');
+    line('  por target_type: $byTarget');
+    if (page.items.isNotEmpty) {
+      line('  más reciente: ${page.items.first['created_at']}');
+      line('  más antiguo en esta página: ${page.items.last['created_at']}');
+    }
+    return page;
+  });
 
   line('--- fin ---');
   return report.toString();

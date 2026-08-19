@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'core/api/api_smoke_test.dart';
 import 'core/auth/auth_service.dart';
 
@@ -13,10 +14,7 @@ class MergedApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Merged',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
       home: const LoginTestScreen(),
     );
   }
@@ -72,8 +70,7 @@ class _LoginTestScreenState extends State<LoginTestScreen> {
     } else {
       setState(() {
         _loading = false;
-        _error = AuthService.instance.lastError ??
-            'Login falló o fue cancelado. Revisa el Client ID y el redirect URI.';
+        _error = AuthService.instance.lastError ?? 'Login falló o fue cancelado. Revisa el Client ID y el redirect URI.';
       });
     }
   }
@@ -105,78 +102,87 @@ class _LoginTestScreenState extends State<LoginTestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Merged — Test de Auth')),
+      // El Center va DENTRO del scroll: el viewport da minWidth 0, así que sin
+      // él la Column se encoge a su hijo más ancho y queda pegada a la
+      // izquierda en vez de centrada.
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _loggedIn ? Icons.check_circle : Icons.lock_outline,
-                size: 64,
-                color: _loggedIn ? Colors.teal : Colors.grey,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _loggedIn ? 'Sesión activa' : 'No autenticado',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              if (_tokenPreview != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Token: $_tokenPreview',
-                  style: Theme.of(context).textTheme.bodySmall,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _loggedIn ? Icons.check_circle : Icons.lock_outline,
+                  size: 64,
+                  color: _loggedIn ? Colors.teal : Colors.grey,
                 ),
-              ],
-              if (_error != null) ...[
                 const SizedBox(height: 16),
                 Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  textAlign: TextAlign.center,
+                  _loggedIn ? 'Sesión activa' : 'No autenticado',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-              ],
-              const SizedBox(height: 32),
-              if (_loading)
-                const CircularProgressIndicator()
-              else if (_loggedIn)
-                FilledButton.tonal(
-                  onPressed: _handleLogout,
-                  child: const Text('Cerrar sesión'),
-                )
-              else
-                FilledButton(
-                  onPressed: _handleLogin,
-                  child: const Text('Iniciar sesión con GitLab'),
-                ),
-              if (_loggedIn && !_loading) ...[
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: _running ? null : _handleSmokeTest,
-                  child: Text(
-                    _running ? 'Ejecutando…' : 'Ejecutar diagnóstico API',
+                if (_tokenPreview != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Token: $_tokenPreview',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                ),
-              ],
-              if (_report != null) ...[
-                const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: SelectableText(
-                    _report!,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
+                ],
+                const SizedBox(height: 32),
+                if (_loading)
+                  const CircularProgressIndicator()
+                else if (_loggedIn)
+                  FilledButton.tonal(
+                    onPressed: _handleLogout,
+                    child: const Text('Cerrar sesión'),
+                  )
+                else
+                  FilledButton(
+                    onPressed: _handleLogin,
+                    child: const Text('Iniciar sesión con GitLab'),
+                  ),
+                if (_loggedIn && !_loading) ...[
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: _running ? null : _handleSmokeTest,
+                    child: Text(
+                      _running ? 'Ejecutando…' : 'Ejecutar diagnóstico API',
                     ),
                   ),
-                ),
+                ],
+                if (_report != null) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SelectableText(
+                      _report!,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -72,11 +72,7 @@ class GitlabClient {
   }) async {
     final response = await _dio.get<dynamic>(
       path,
-      queryParameters: {
-        ...?query,
-        'page': page,
-        'per_page': perPage,
-      },
+      queryParameters: {...?query, 'page': page, 'per_page': perPage},
     );
     _ensureOk(response);
 

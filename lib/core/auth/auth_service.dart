@@ -59,10 +59,7 @@ class AuthService {
   Future<void> _persistTokens(TokenResponse result) async {
     await _storage.write(key: _keyAccessToken, value: result.accessToken);
     if (result.refreshToken != null) {
-      await _storage.write(
-        key: _keyRefreshToken,
-        value: result.refreshToken,
-      );
+      await _storage.write(key: _keyRefreshToken, value: result.refreshToken);
     }
     if (result.accessTokenExpirationDateTime != null) {
       await _storage.write(
@@ -79,7 +76,8 @@ class AuthService {
     if (accessToken == null) return null;
 
     final expiry = expiryStr != null ? DateTime.tryParse(expiryStr) : null;
-    final isExpired = expiry == null ||
+    final isExpired =
+        expiry == null ||
         expiry.isBefore(DateTime.now().add(const Duration(seconds: 30)));
 
     if (!isExpired) return accessToken;
