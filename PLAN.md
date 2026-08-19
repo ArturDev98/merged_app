@@ -1,138 +1,160 @@
 # Merged — Plan de trabajo
 
-App móvil Flutter: dashboard personal de GitLab. Responde a una pregunta
-concreta cada mañana: **¿qué requiere mi atención hoy?**
+App móvil Flutter: **GitLab resumido en el móvil**. El usuario inicia sesión con
+su cuenta de GitLab y ve, de un vistazo, su informe personal: su actividad, sus
+merge requests, sus commits, sus ramas y sus proyectos.
 
-- **Alcance v1:** solo lectura (`read_api` + `read_user`, ya validados).
-- **Instancia:** gitlab.com fija.
-- **Home:** bandeja unificada de todos + merge requests.
+- **Destino:** app pública. Se valida primero con la cuenta del autor, pero se
+  diseña para cualquier usuario de GitLab.
+- **Alcance v0.1:** solo lectura (`read_api` + `read_user`, ya validados).
+- **Instancia:** gitlab.com. Ver "Decisiones abiertas".
 
 ---
 
-## Restricción que define el diseño
+## Lo que dijo la API (medido, no supuesto)
 
-GitLab **no expone un endpoint de "mis commits"**. Conviene tenerlo claro antes
-de prometer esa pantalla:
+Diagnóstico del 2026-08-18 contra una cuenta real de 11 proyectos:
 
-| Qué queremos | Endpoint | Calidad |
-|---|---|---|
-| Qué me toca revisar / responder | `GET /todos?state=pending` | Excelente. Filtros por `approval_required`, `build_failed`, `unmergeable`, `assigned`, `mentioned` |
-| Mis MRs (creados / asignados / a revisar) | `GET /merge_requests?scope=…` | Excelente. Una sola llamada por scope, incluye `draft`, `head_pipeline`, `user_notes_count` |
-| Mis commits | `GET /events?action=pushed` | **Pobre.** Devuelve *eventos de push*, no commits |
+| Fuente | Resultado |
+|---|---|
+| MRs creados (histórico) | 9, **0 abiertos** en ese momento |
+| MRs asignados / como reviewer (histórico) | **0** |
+| Todos pendientes | **0** |
+| Eventos recientes | **100 con página siguiente** (~4/día) |
+| Eventos degradados (`commit_count: 0`) | **0 de 20** |
+| Reparto de actividad | `pushed to: 63`, `pushed new: 33`, `opened: 3`, `joined: 1` |
 
-Un evento `pushed` trae `commit_title` (solo el último del push), `commit_count`
-y la rama — nunca la lista de commits. Si el push supera el límite de actividad
-de GitLab, llega degradado: `commit_count: 0` y campos nulos. Además los eventos
-tienen retención limitada en el tiempo.
+Dos lecturas que cambiaron el plan original:
 
-**Consecuencia:** la pantalla de commits se llama "Actividad" y muestra pushes,
-no commits. Iterar `GET /projects/:id/repository/commits` por cada proyecto sería
-la alternativa, pero cuesta N+1 llamadas y filtra el autor por string: fuera de v1.
+1. **La home de "qué requiere mi atención" estaría vacía casi siempre** para un
+   perfil como este. No es que hoy no haya nada: es que `reviews_for_me` y
+   `assigned_to_me` son 0 en todo el histórico. Para otros perfiles (revisores,
+   leads) serán la parte más llena, así que se mantienen — pero no pueden ser
+   el centro de la pantalla principal.
+2. **Los eventos de push llegan íntegros**, no degradados como advierte la
+   documentación para el peor caso. La actividad es la fuente más rica.
+
+### Cómo sí se consiguen "mis commits"
+
+No existe endpoint de commits propios entre proyectos, pero cada evento de push
+trae `project_id`, `commit_from` y `commit_to`. Con eso,
+`GET /projects/:id/repository/compare?from=&to=` devuelve la **lista real de
+commits** (id, título, autor, fecha). Verificado en la documentación.
+
+Así que: el feed cuesta **una** llamada, y los commits reales de un push cuestan
+**una más, solo al tocarlo**. Nada de N+1 al pintar la lista.
+
+### Ramas creadas
+
+No hacen falta llamadas extra: son los propios eventos con
+`push_data.action == 'created'` y `ref_type == 'branch'` (33 de los últimos 100).
+
+---
+
+## Superficies de la v0.1
+
+1. **Resumen (el "informe").** Pantalla de entrada: contadores del periodo
+   —pushes, commits, ramas creadas, proyectos, MRs abiertos— y accesos al resto.
+2. **Actividad.** Feed de pushes. Al tocar uno, sus commits reales vía `compare`.
+3. **Merge requests.** Creados por mí / asignados / a revisar. Con estado de
+   pipeline y draft.
+4. **Proyectos.** Aquellos donde el usuario es miembro.
+5. **Ramas creadas.** Derivadas del feed de eventos.
+
+**Home híbrida:** la actividad ocupa el cuerpo; arriba, una franja compacta de
+"requiere tu atención" (MRs abiertos propios, todos pendientes) que **se oculta
+cuando está vacía** en lugar de mostrar un hueco.
+
+> Los estados vacíos son diseño de primera clase, no un caso borde: en la cuenta
+> de desarrollo varias secciones estarán vacías a diario.
 
 ---
 
 ## Arquitectura
 
-Se continúa la estructura que ya insinúa `lib/core/auth/`:
-
 ```
 lib/
   core/
-    auth/        auth_service.dart          (ya existe, funcionando)
-    api/         gitlab_client.dart         (dio + interceptor de auth)
-    models/      user, merge_request, todo, event
+    auth/        auth_service.dart          ✅ funcionando
+    api/         gitlab_client.dart         ✅ dio + interceptor + paginación
+                 api_smoke_test.dart        (temporal, se borra en fase 2)
+    models/      user, project, merge_request, todo, push_event, commit
   features/
-    inbox/       home "qué requiere mi atención"
+    summary/     el informe (home)
+    activity/    feed + detalle de push
     merge_requests/
-    activity/
-  app.dart       MaterialApp + router
-  main.dart      solo bootstrap
+    projects/
+  app.dart
+  main.dart
 ```
 
-**Decisiones técnicas:**
-
-- **Estado: `flutter_riverpod`.** El caso de uso es datos asíncronos con caché,
-  invalidación y pull-to-refresh, que es justo su punto fuerte. La home compone
-  tres providers independientes sin acoplarlos.
-- **HTTP: `dio`.** Se elige por los interceptors: uno solo inyecta el token
-  llamando a `AuthService.getValidAccessToken()`, que ya resuelve el refresh.
-- **Modelos: `fromJson` a mano.** Son ~5 modelos; no compensa la fricción de
-  `build_runner`. Se migra a `json_serializable` si crecen.
+- **Estado: `flutter_riverpod`.** Datos asíncronos con caché e invalidación.
+- **HTTP: `dio`.** Elegido por los interceptors. ✅ hecho.
+- **Modelos: `fromJson` a mano** mientras sean pocos.
 
 ---
 
 ## Fases
 
-### Fase 0 — Higiene (antes de tocar features) — ✅ completada
+### Fase 0 — Higiene — ✅ completada
 
-Barato ahora, caro después.
+- [x] `git init` + primer commit
+- [x] Smoke test real en `widget_test.dart`, mockeando el canal de
+      flutter_secure_storage
+- [x] `flutter analyze` sin avisos
+- [x] Identidad real: `com.example.merged_app` → `dev.merged.app` (Android, iOS
+      y macOS)
 
-- [x] **`git init` + primer commit.** Nada está versionado todavía. Es el mayor
-      riesgo del proyecto ahora mismo.
-- [x] Sustituir `test/widget_test.dart` (era el test del contador de la plantilla)
-      por un smoke test real de arranque sin sesión, mockeando el MethodChannel
-      de flutter_secure_storage.
-- [x] Limpiar 3 warnings de null-checks muertos en `auth_service.dart:46,106,111`
-      (en flutter_appauth 12 esos valores ya no son nullable).
-- [x] Cambiar `applicationId` de `com.example.merged_app` a `dev.merged.app`
-      (también los bundle id de iOS y macOS). No afecta al
-      login: el redirect (`dev.merged.app://callback`) es independiente del
-      applicationId. Renombrar el paquete más adelante es mucho más molesto.
+### Fase 1 — Capa de datos — en curso
 
-### Fase 1 — Capa de datos
+- [x] `GitlabClient` sobre dio, `baseUrl = https://gitlab.com/api/v4`
+- [x] Interceptor de auth: inyecta el token; ante 401 refresca y reintenta una
+      vez; si el refresh falla, cierra sesión
+- [x] Paginación por cabeceras (`x-next-page`, `x-total` tratada como opcional)
+- [x] Smoke test contra la cuenta real: los scopes alcanzan, ningún 403
+- [ ] Modelos a partir de los payloads reales
+- [ ] Repositorios por superficie (actividad, MRs, proyectos)
 
-Empieza por un **smoke test** que valide los scopes antes de construir UI encima:
-llamar a `GET /user` y `GET /todos` con el token real. Si `read_api` no alcanzara
-para algo, es mejor descubrirlo aquí que con tres pantallas ya hechas.
+### Fase 2 — Resumen + Actividad
 
-- [ ] `GitlabClient` sobre dio, con `baseUrl = https://gitlab.com/api/v4`
-- [ ] Interceptor de auth: inyecta el token; ante 401 refresca y reintenta una vez;
-      si el refresh falla, hace logout y devuelve al login
-- [ ] Modelos: `GitlabUser`, `MergeRequest`, `Todo`, `PushEvent`
-- [ ] Paginación: `page` / `per_page=20`, leyendo la cabecera `X-Next-Page`
+- [ ] Riverpod y estructura de `features/`
+- [ ] Pantalla de resumen con los contadores
+- [ ] Feed de actividad con paginación (hay más de 100 eventos)
+- [ ] Detalle de push → commits reales vía `compare`
+- [ ] Pull to refresh y los cuatro estados: cargando, vacío, error, sin conexión
+- [ ] Borrar `api_smoke_test.dart`
 
-### Fase 2 — Home "Qué requiere mi atención"
+### Fase 3 — Merge requests y proyectos
 
-Fusiona tres fuentes:
+- [ ] Lista de MRs por scope, con pipeline y draft
+- [ ] Detalle de MR
+- [ ] Lista de proyectos
+- [ ] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
+      válvula de escape imprescindible
 
-```
-GET /todos?state=pending
-GET /merge_requests?scope=reviews_for_me&state=opened
-GET /merge_requests?scope=assigned_to_me&state=opened
-```
+### Fase 4 — Ramas y pulido
 
-- [ ] **Deduplicar.** Un mismo MR aparece a la vez como todo `approval_required`
-      y en `reviews_for_me`. Sin dedup la home muestra todo dos veces. Clave por
-      id de MR / `target_url`
-- [ ] Agrupar por urgencia: pipelines rotos → aprobaciones pendientes → menciones
-- [ ] Pull to refresh
-- [ ] Los cuatro estados de verdad: cargando, vacío, error, sin conexión
-
-### Fase 3 — Detalle de MR
-
-- [ ] Estado de pipeline (`head_pipeline`), draft, nº de comentarios, ramas
-- [ ] **"Abrir en GitLab"** con `web_url`. En una app de solo lectura esta es la
-      válvula de escape imprescindible: todo lo que no se pueda hacer aquí, se
-      hace en el navegador
-
-### Fase 4 — Actividad
-
-- [ ] `GET /events?action=pushed`, presentado honestamente como pushes
-- [ ] Contemplar el caso degradado (`commit_count: 0`) sin romper la UI
-
-### Fase 5 — Pulido
-
+- [ ] Ramas creadas, derivadas de los eventos
 - [ ] Tema claro/oscuro, icono, splash
-- [ ] Caché offline (última respuesta buena persistida)
-- [ ] Logout y pantalla de sesión expirada
+- [ ] Caché offline
+- [ ] Sesión expirada y logout
 
 ---
 
-## Fuera de v1
+## Decisiones abiertas
 
-Escribirlo evita que se cuele: acciones de escritura (aprobar, comentar, marcar
-todos), instancias self-managed, issues, pipelines/CI como sección propia,
-notificaciones push, búsqueda global, gestión de proyectos.
+- **Instancias self-managed.** Hoy la URL es fija. Para una app pública es una
+  limitación real: mucha gente usa GitLab autoalojado. `GitlabClient.baseUrl`
+  está centralizado en un único punto a propósito, así que añadir una pantalla
+  de instancia es un cambio acotado. Decidir antes de publicar.
+- **Aplicación OAuth de producción.** La actual es "Merged (Dev)", personal. Una
+  app pública necesita la suya. El `client_id` viaja en el binario, lo cual es
+  correcto para un cliente público con PKCE.
+
+## Fuera de la v0.1
+
+Acciones de escritura (aprobar, comentar, marcar todos), issues, pipelines como
+sección propia, notificaciones push, búsqueda global.
 
 ---
 
