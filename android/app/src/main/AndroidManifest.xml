@@ -1,0 +1,62 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:label="merged_app"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <!-- OJO con dos cosas en esta activity, ambas necesarias para que el
+             login OAuth de GitLab (flutter_appauth) pueda volver a la app:
+
+             1. NO declarar aquí un intent-filter para dev.merged.app://callback.
+                AppAuth ya registra su propia RedirectUriReceiverActivity con ese
+                esquema, vía el manifestPlaceholder appAuthRedirectScheme del
+                build.gradle.kts. Si lo declaramos también aquí, Android ve dos
+                candidatos para la misma URI y el código de autorización acaba en
+                MainActivity, donde AppAuth nunca lo recibe.
+
+             2. NO usar el android:taskAffinity="" que trae el template de Flutter.
+                AuthorizationManagementActivity es launchMode="singleTask" y, al
+                volver del navegador, necesita reencontrar SU propia instancia.
+                Una afinidad vacía significa "sin afinidad", así que no la
+                encuentra: crea una instancia nueva y sin estado, y AppAuth
+                descarta la respuesta con "No stored state - unable to handle
+                response" (el login se queda colgado tras autorizar). MainActivity
+                debe compartir la afinidad por defecto con las de AppAuth. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
