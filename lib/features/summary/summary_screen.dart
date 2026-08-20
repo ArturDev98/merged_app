@@ -7,6 +7,7 @@ import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../activity/push_detail_screen.dart';
 import '../pending/pending_screen.dart';
+import '../projects/projects_screen.dart';
 
 /// Home: el informe personal, con la actividad como cuerpo.
 class SummaryScreen extends ConsumerWidget {
@@ -285,6 +286,9 @@ class _Counters extends ConsumerWidget {
             label: 'Proyectos',
             value: projects.valueOrNull?.length,
             loading: projects.isLoading,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ProjectsScreen()),
+            ),
           ),
         ],
       ),
@@ -298,6 +302,7 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.loading,
     this.hint,
+    this.onTap,
   });
 
   final String label;
@@ -305,51 +310,58 @@ class _StatCard extends StatelessWidget {
   final bool loading;
   final String? hint;
 
+  /// Las tarjetas con destino son la vía de entrada a cada sección.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: 116,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (loading)
-            const SizedBox(
-              height: 32,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        width: 116,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (loading)
+              const SizedBox(
+                height: 32,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                height: 32,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value?.toString() ?? '—',
+                    style: theme.textTheme.headlineSmall,
+                  ),
                 ),
               ),
-            )
-          else
-            SizedBox(
-              height: 32,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value?.toString() ?? '—',
-                  style: theme.textTheme.headlineSmall,
+            Text(label, style: theme.textTheme.bodySmall),
+            if (hint != null)
+              Text(
+                hint!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
                 ),
               ),
-            ),
-          Text(label, style: theme.textTheme.bodySmall),
-          if (hint != null)
-            Text(
-              hint!,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

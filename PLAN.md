@@ -134,7 +134,7 @@ lib/
 - [x] Identidad real: `com.example.merged_app` → `dev.merged.app` (Android, iOS
       y macOS)
 
-### Fase 1 — Capa de datos — en curso
+### Fase 1 — Capa de datos — ✅ completada
 
 - [x] `GitlabClient` sobre dio, `baseUrl = https://gitlab.com/api/v4`
 - [x] Interceptor de auth: inyecta el token; ante 401 refresca y reintenta una
@@ -142,23 +142,23 @@ lib/
 - [x] Paginación por cabeceras (`x-next-page`, `x-total` tratada como opcional)
 - [x] Smoke test contra la cuenta real: los scopes alcanzan, ningún 403
 - [x] Modelos a partir de los payloads reales
-- [ ] Repositorios por superficie (actividad, MRs, proyectos)
+- [x] Repositorios por superficie (actividad, MRs, proyectos)
 
-### Fase 2 — Resumen + Actividad
+### Fase 2 — Resumen + Actividad — ✅ completada
 
-- [ ] Riverpod y estructura de `features/`
-- [ ] Pantalla de resumen con los contadores
-- [ ] Campana con contador de pendientes deduplicados
-- [ ] Feed de actividad con paginación (hay más de 100 eventos)
-- [ ] Detalle de push → commits reales vía `compare`
-- [ ] Pull to refresh y los cuatro estados: cargando, vacío, error, sin conexión
-- [ ] Borrar `api_smoke_test.dart`
+- [x] Riverpod y estructura de `features/`
+- [x] Pantalla de resumen con los contadores
+- [x] Campana con contador de pendientes deduplicados
+- [x] Feed de actividad con paginación (hay más de 100 eventos)
+- [x] Detalle de push → commits reales vía `compare`
+- [x] Pull to refresh y los cuatro estados: cargando, vacío, error, sin conexión
+- [x] Borrar `api_smoke_test.dart`
 
-### Fase 3 — Merge requests y proyectos
+### Fase 3 — Merge requests y proyectos — en curso
 
 - [ ] Lista de MRs por scope, con draft (el pipeline va en el detalle)
 - [ ] Detalle de MR
-- [ ] Lista de proyectos
+- [x] Lista de proyectos (accesible tocando su tarjeta en el resumen)
 - [ ] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
       válvula de escape imprescindible
 
