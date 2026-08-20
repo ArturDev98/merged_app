@@ -98,10 +98,16 @@ class PushData {
   /// puede expandirlo.
   bool get isDegraded => commitCount == 0 || commitTo == null;
 
-  /// Los commits reales se piden con
-  /// `/projects/:id/repository/compare?from=commitFrom&to=commitTo`.
-  bool get canExpandCommits =>
-      commitFrom != null && commitTo != null && !isDegraded;
+  /// Hay un destino con el que comparar. **No** implica que haya base: en las
+  /// creaciones de rama (`pushed new`) GitLab manda `commit_from` nulo, porque
+  /// antes de ese push no existía nada con lo que comparar.
+  bool get hasTarget => commitTo != null && !isDegraded;
+
+  /// Si hace falta suplir la base con la rama por defecto del proyecto.
+  ///
+  /// Era la causa de que un tercio del feed mostrara "sin detalle de commits":
+  /// toda rama recién creada entraba por aquí.
+  bool get needsBaseFallback => hasTarget && commitFrom == null;
 
   factory PushData.fromJson(Map<String, dynamic> json) => PushData(
     action: switch (json['action'] as String?) {

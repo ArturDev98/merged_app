@@ -26,6 +26,15 @@ class PushDetailScreen extends ConsumerWidget {
     final push = event.pushData;
     final theme = Theme.of(context);
 
+    // En una creación de rama GitLab no manda commit_from: antes de ese push no
+    // existía nada con lo que comparar. Se usa la rama por defecto del proyecto
+    // como base, que da justo los commits que la rama introduce.
+    final defaultBranch = ref
+        .watch(projectsByIdProvider)[event.projectId]
+        ?.defaultBranch;
+    final base = push?.commitFrom ?? defaultBranch;
+    final canExpand = push != null && push.hasTarget && base != null;
+
     return Scaffold(
       appBar: AppBar(title: Text(projectName)),
       body: ListView(
@@ -46,31 +55,50 @@ class PushDetailScreen extends ConsumerWidget {
                     color: theme.colorScheme.outline,
                   ),
                 ),
+                if (canExpand && (push.needsBaseFallback))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Rama nueva · comparada con $base',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
           const Divider(height: 1),
-          if (push == null || !push.canExpandCommits)
+          if (!canExpand)
             EmptyView(
               icon: Icons.commit_outlined,
               title: 'Sin detalle de commits',
-              message: push?.isDegraded ?? true
-                  // GitLab recorta los pushes que superan su límite de
-                  // actividad; no es un fallo nuestro y conviene decirlo.
-                  ? 'GitLab entregó este push sin el detalle de sus commits.'
-                  : 'Este evento no incluye un rango de commits.',
+              message: _whyNoDetail(push, defaultBranch),
             )
           else
             _CommitList(
               push: (
                 projectId: event.projectId,
-                from: push.commitFrom!,
+                from: base,
                 to: push.commitTo!,
               ),
             ),
         ],
       ),
     );
+  }
+
+  static String _whyNoDetail(PushData? push, String? defaultBranch) {
+    if (push == null) return 'Este evento no es un push.';
+    if (push.isDegraded) {
+      // GitLab recorta los pushes que superan su límite de actividad.
+      return 'GitLab entregó este push sin el detalle de sus commits.';
+    }
+    if (defaultBranch == null) {
+      return 'No se pudo determinar la rama por defecto del proyecto para '
+          'comparar.';
+    }
+    return 'Este evento no incluye un rango de commits.';
   }
 }
 
