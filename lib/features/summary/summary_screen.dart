@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
+import '../../shared/activity_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
@@ -397,51 +398,52 @@ class _ActivityTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projects = ref.watch(projectsByIdProvider);
+    final project = ref.watch(projectsByIdProvider)[event.projectId];
     // Los eventos solo traen project_id: el nombre sale del índice local.
-    final project = projects[event.projectId];
-    // Se usa el nombre corto, no name_with_namespace: el grupo ocupaba la línea
-    // entera y dejaba fuera la rama y el número de commits, que es lo que
-    // aporta información. El nombre completo se ve en el detalle.
     final projectName = project?.name ?? 'Proyecto ${event.projectId}';
-    final projectFullName =
-        project?.nameWithNamespace ?? 'Proyecto ${event.projectId}';
+    final projectFullName = project?.nameWithNamespace ?? projectName;
 
     final push = event.pushData;
-    final title = push?.commitTitle ?? event.targetTitle ?? event.actionName;
+    final action = describeActivity(event);
 
-    final commitSuffix = (push != null && push.commitCount > 0)
-        ? ' · ${push.commitCount} commits'
-        : '';
-    final subtitle = push != null
-        ? '$projectName · ${push.ref}$commitSuffix'
-        : projectName;
+    final String title;
+    final String subtitle;
+    if (push != null) {
+      final commits = push.commitCount > 0
+          ? ' · ${push.commitCount} commits'
+          : '';
+      title = push.commitTitle ?? push.ref;
+      subtitle = '$projectName · ${push.ref}$commits';
+    } else {
+      // En un evento de alta, target_title es el propio nombre del proyecto, y
+      // repetirlo arriba y abajo no decía qué había ocurrido.
+      final label = event.targetTitle ?? projectName;
+      title = label;
+      subtitle = label == projectName ? action : '$action · $projectName';
+    }
 
-    // Los eventos que no son push (abrir un MR, por ejemplo) no tienen detalle
-    // propio todavía, pero tampoco deben quedarse muertos al tocarlos: los
-    // eventos no traen la URL del destino, así que se compone con la del
-    // proyecto y se abre en GitLab.
+    // Todo evento lleva a algún sitio: al detalle si es un push, a su objeto en
+    // GitLab si lo tiene, y al proyecto en el resto de casos. Antes, cualquier
+    // evento sin destino propio se quedaba muerto al tocarlo y parecía roto.
     final targetPath = event.targetPath;
-    final targetUrl = (project?.webUrl != null && targetPath != null)
+    final destination = (project?.webUrl != null && targetPath != null)
         ? '${project!.webUrl}$targetPath'
-        : null;
+        : project?.webUrl;
 
-    final VoidCallback? onTap;
-    if (event.isPush) {
+    final VoidCallback onTap;
+    if (push != null) {
       onTap = () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) =>
               PushDetailScreen(event: event, projectName: projectFullName),
         ),
       );
-    } else if (targetUrl != null) {
-      onTap = () => openInGitlab(context, targetUrl);
     } else {
-      onTap = null;
+      onTap = () => openInGitlab(context, destination);
     }
 
     return ListTile(
-      leading: Icon(_iconFor(event), size: 22),
+      leading: Icon(activityIcon(event), size: 22),
       title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Row(
@@ -451,7 +453,7 @@ class _ActivityTile extends ConsumerWidget {
             relativeTime(event.createdAt),
             style: Theme.of(context).textTheme.labelSmall,
           ),
-          if (targetUrl != null && !event.isPush) ...[
+          if (push == null) ...[
             const SizedBox(width: 6),
             const Icon(Icons.open_in_new, size: 14),
           ],
@@ -459,13 +461,5 @@ class _ActivityTile extends ConsumerWidget {
       ),
       onTap: onTap,
     );
-  }
-
-  static IconData _iconFor(ActivityEvent event) {
-    final push = event.pushData;
-    if (push == null) return Icons.bolt_outlined;
-    if (push.createsBranch) return Icons.call_split;
-    if (push.action == PushAction.removed) return Icons.delete_outline;
-    return Icons.arrow_upward;
   }
 }
