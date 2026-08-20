@@ -21,6 +21,7 @@ class ActivityEvent {
     this.pushData,
     this.targetTitle,
     this.targetType,
+    this.targetIid,
   });
 
   final int id;
@@ -39,6 +40,22 @@ class ActivityEvent {
   /// "MergeRequest", "Issue"… Nulo en los pushes, que apuntan al proyecto.
   final String? targetType;
 
+  /// Número visible del objeto (!450, #12). Los eventos no traen la URL del
+  /// destino, así que hay que componerla con la del proyecto.
+  final int? targetIid;
+
+  /// Ruta relativa del destino dentro del proyecto, o null si no se sabe
+  /// componer.
+  String? get targetPath {
+    final iid = targetIid;
+    if (iid == null) return null;
+    return switch (targetType) {
+      'MergeRequest' => '/-/merge_requests/$iid',
+      'Issue' => '/-/issues/$iid',
+      _ => null,
+    };
+  }
+
   bool get isPush => pushData != null;
 
   factory ActivityEvent.fromJson(Map<String, dynamic> json) => ActivityEvent(
@@ -56,6 +73,7 @@ class ActivityEvent {
         : null,
     targetTitle: json['target_title'] as String?,
     targetType: json['target_type'] as String?,
+    targetIid: json['target_iid'] as int?,
   );
 }
 

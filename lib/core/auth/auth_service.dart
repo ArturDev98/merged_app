@@ -1,6 +1,8 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'auth_failure.dart';
+
 /// Servicio de autenticación contra GitLab usando OAuth2 + PKCE.
 /// No usa Client Secret: la app es pública (no confidencial), por lo que
 /// PKCE garantiza la seguridad del intercambio del authorization code
@@ -24,15 +26,14 @@ class AuthService {
   static const _keyRefreshToken = 'gl_refresh_token';
   static const _keyExpiry = 'gl_expiry';
 
-  /// Último error capturado durante login/refresh, solo para debugging.
-  /// En producción esto se reemplaza por un logger real, no se muestra
-  /// crudo al usuario final.
-  String? lastError;
+  /// Último fallo de login, ya clasificado para que la UI no tenga que
+  /// interpretar excepciones ni enseñar su `toString()`.
+  AuthFailure? lastFailure;
 
   /// Lanza el flujo de login: abre el navegador/webview del sistema,
   /// el usuario se autentica en GitLab, y al volver obtenemos los tokens.
   Future<bool> login() async {
-    lastError = null;
+    lastFailure = null;
     try {
       final result = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
@@ -44,14 +45,18 @@ class AuthService {
       );
 
       if (result.accessToken == null) {
-        lastError = 'La respuesta de GitLab no incluyó un access token.';
+        lastFailure = const AuthFailure(
+          kind: AuthFailureKind.rejected,
+          title: 'Respuesta incompleta de GitLab',
+          message: 'GitLab no devolvió un token de acceso.',
+        );
         return false;
       }
 
       await _persistTokens(result);
       return true;
     } catch (e) {
-      lastError = e.toString();
+      lastFailure = AuthFailure.from(e);
       return false;
     }
   }
@@ -112,7 +117,7 @@ class AuthService {
       await _persistTokens(result);
       return result.accessToken;
     } catch (e) {
-      lastError = e.toString();
+      lastFailure = AuthFailure.from(e);
       await logout();
       return null;
     }

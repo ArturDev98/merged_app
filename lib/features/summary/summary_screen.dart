@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
+import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../activity/push_detail_screen.dart';
@@ -200,8 +201,15 @@ class _UserHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider).valueOrNull;
+    final async = ref.watch(currentUserProvider);
+    final user = async.valueOrNull;
     final theme = Theme.of(context);
+
+    // valueOrNull es null tanto cargando como al fallar, así que sin mirar el
+    // estado el encabezado se quedaba en "Cargando…" para siempre.
+    final failed = async.hasError && !async.hasValue;
+    final label =
+        user?.name ?? (failed ? 'No se pudo cargar tu perfil' : 'Cargando…');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -212,8 +220,13 @@ class _UserHeader extends ConsumerWidget {
             backgroundImage: user?.avatarUrl != null
                 ? NetworkImage(user!.avatarUrl!)
                 : null,
+            // Si la imagen no carga (avatar privado, red caída) el hijo sigue
+            // pintándose y no queda un círculo vacío.
+            onBackgroundImageError: user?.avatarUrl != null ? (_, _) {} : null,
             child: user?.avatarUrl == null
-                ? const Icon(Icons.person_outline)
+                ? Icon(
+                    failed ? Icons.person_off_outlined : Icons.person_outline,
+                  )
                 : null,
           ),
           const SizedBox(width: 12),
@@ -222,7 +235,7 @@ class _UserHeader extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user?.name ?? 'Cargando…',
+                  label,
                   style: theme.textTheme.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -232,6 +245,16 @@ class _UserHeader extends ConsumerWidget {
                     '@${user.username}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
+                    ),
+                  )
+                else if (failed)
+                  InkWell(
+                    onTap: () => ref.invalidate(currentUserProvider),
+                    child: Text(
+                      'Reintentar',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
               ],
@@ -394,25 +417,47 @@ class _ActivityTile extends ConsumerWidget {
         ? '$projectName · ${push.ref}$commitSuffix'
         : projectName;
 
+    // Los eventos que no son push (abrir un MR, por ejemplo) no tienen detalle
+    // propio todavía, pero tampoco deben quedarse muertos al tocarlos: los
+    // eventos no traen la URL del destino, así que se compone con la del
+    // proyecto y se abre en GitLab.
+    final targetPath = event.targetPath;
+    final targetUrl = (project?.webUrl != null && targetPath != null)
+        ? '${project!.webUrl}$targetPath'
+        : null;
+
+    final VoidCallback? onTap;
+    if (event.isPush) {
+      onTap = () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              PushDetailScreen(event: event, projectName: projectFullName),
+        ),
+      );
+    } else if (targetUrl != null) {
+      onTap = () => openInGitlab(context, targetUrl);
+    } else {
+      onTap = null;
+    }
+
     return ListTile(
       leading: Icon(_iconFor(event), size: 22),
       title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Text(
-        relativeTime(event.createdAt),
-        style: Theme.of(context).textTheme.labelSmall,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            relativeTime(event.createdAt),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          if (targetUrl != null && !event.isPush) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.open_in_new, size: 14),
+          ],
+        ],
       ),
-      // Solo los pushes tienen detalle que enseñar.
-      onTap: event.isPush
-          ? () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => PushDetailScreen(
-                  event: event,
-                  projectName: projectFullName,
-                ),
-              ),
-            )
-          : null,
+      onTap: onTap,
     );
   }
 
