@@ -154,12 +154,12 @@ lib/
 - [x] Pull to refresh y los cuatro estados: cargando, vacío, error, sin conexión
 - [x] Borrar `api_smoke_test.dart`
 
-### Fase 3 — Merge requests y proyectos — en curso
+### Fase 3 — Merge requests y proyectos — ✅ completada
 
-- [ ] Lista de MRs por scope, con draft (el pipeline va en el detalle)
-- [ ] Detalle de MR
+- [x] Lista de MRs por scope, con draft y filtro de estado
+- [x] Detalle de MR con pipeline y diagnóstico de fusión
 - [x] Lista de proyectos (accesible tocando su tarjeta en el resumen)
-- [ ] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
+- [x] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
       válvula de escape imprescindible
 
 ### Fase 4 — Ramas y pulido

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/pending_work.dart';
 import '../../core/providers.dart';
+import '../../shared/merge_request_labels.dart';
 import '../../shared/open_in_gitlab.dart';
+import '../merge_requests/merge_requests_screen.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 
@@ -16,7 +18,21 @@ class PendingScreen extends ConsumerWidget {
     final pending = ref.watch(pendingWorkProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pendientes')),
+      appBar: AppBar(
+        title: const Text('Pendientes'),
+        actions: [
+          IconButton(
+            tooltip: 'Ver merge requests a revisar',
+            icon: const Icon(Icons.merge_type),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    const MergeRequestsScreen(initialScope: MrScope.reviewing),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: pending.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

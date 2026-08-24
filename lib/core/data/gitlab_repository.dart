@@ -1,6 +1,7 @@
 import '../api/gitlab_client.dart';
 import '../models/gitlab_project.dart';
 import '../models/gitlab_user.dart';
+import '../models/merge_request_detail.dart';
 import '../models/merge_request_summary.dart';
 import '../models/activity_event.dart';
 import '../models/repo_commit.dart';
@@ -122,6 +123,18 @@ class GitlabRepository {
     page: page,
     perPage: perPage,
     parse: MergeRequestSummary.fromJson,
+  );
+
+  /// Un merge request concreto, con lo que la lista no trae.
+  ///
+  /// El endpoint por proyecto usa el `iid` (el número visible, !450), no el
+  /// `id` global que devuelve la lista.
+  Future<MergeRequestDetail> mergeRequestDetail({
+    required int projectId,
+    required int iid,
+  }) => _client.getOne(
+    '/projects/$projectId/merge_requests/$iid',
+    parse: MergeRequestDetail.fromJson,
   );
 
   /// Pendientes. Solo acepta `pending` o `done`; `all` devuelve 400.

@@ -8,6 +8,7 @@ import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../activity/push_detail_screen.dart';
+import '../merge_requests/merge_requests_screen.dart';
 import '../pending/pending_screen.dart';
 import '../projects/projects_screen.dart';
 
@@ -305,6 +306,11 @@ class _Counters extends ConsumerWidget {
             hint: 'tuyos',
             value: myMrs.valueOrNull?.length,
             loading: myMrs.isLoading,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const MergeRequestsScreen(),
+              ),
+            ),
           ),
           _StatCard(
             label: 'Proyectos',

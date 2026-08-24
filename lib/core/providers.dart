@@ -5,6 +5,7 @@ import 'data/gitlab_repository.dart';
 import 'data/pending_work.dart';
 import 'models/gitlab_project.dart';
 import 'models/gitlab_user.dart';
+import 'models/merge_request_detail.dart';
 import 'models/merge_request_summary.dart';
 import 'models/activity_event.dart';
 import 'models/repo_commit.dart';
@@ -186,3 +187,93 @@ final pushCommitsProvider = FutureProvider.family<List<RepoCommit>, PushRef>(
       .watch(gitlabRepositoryProvider)
       .commitsForPush(projectId: push.projectId, from: push.from, to: push.to),
 );
+
+/// Consulta de una lista de merge requests. Record: igualdad estructural, así
+/// que la family cachea por (scope, estado) sin escribir == ni hashCode.
+typedef MrQuery = ({String scope, String state});
+
+class MergeRequestListState {
+  const MergeRequestListState({
+    required this.items,
+    this.nextPage,
+    this.loadingMore = false,
+    this.total,
+  });
+
+  final List<MergeRequestSummary> items;
+  final int? nextPage;
+  final bool loadingMore;
+  final int? total;
+
+  bool get hasMore => nextPage != null;
+
+  MergeRequestListState copyWith({bool? loadingMore}) => MergeRequestListState(
+    items: items,
+    nextPage: nextPage,
+    loadingMore: loadingMore ?? this.loadingMore,
+    total: total,
+  );
+}
+
+/// Lista paginada de merge requests para un scope y estado dados.
+class MergeRequestList
+    extends FamilyAsyncNotifier<MergeRequestListState, MrQuery> {
+  @override
+  Future<MergeRequestListState> build(MrQuery arg) => _fetch(1);
+
+  Future<MergeRequestListState> _fetch(int page) async {
+    final result = await ref
+        .read(gitlabRepositoryProvider)
+        .mergeRequests(scope: arg.scope, state: arg.state, page: page);
+    return MergeRequestListState(
+      items: result.items,
+      nextPage: result.nextPage,
+      total: result.total,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || current.loadingMore) return;
+
+    state = AsyncData(current.copyWith(loadingMore: true));
+    try {
+      final result = await ref
+          .read(gitlabRepositoryProvider)
+          .mergeRequests(
+            scope: arg.scope,
+            state: arg.state,
+            page: current.nextPage!,
+          );
+      state = AsyncData(
+        MergeRequestListState(
+          items: [...current.items, ...result.items],
+          nextPage: result.nextPage,
+          total: result.total ?? current.total,
+        ),
+      );
+    } catch (_) {
+      // Un fallo al paginar no debe tirar lo ya cargado.
+      state = AsyncData(current.copyWith(loadingMore: false));
+    }
+  }
+}
+
+final mergeRequestListProvider =
+    AsyncNotifierProvider.family<
+      MergeRequestList,
+      MergeRequestListState,
+      MrQuery
+    >(MergeRequestList.new);
+
+/// Identifica un merge request dentro de su proyecto.
+typedef MrRef = ({int projectId, int iid});
+
+/// Detalle de un merge request. Es la única vía para conocer su pipeline: la
+/// lista no incluye head_pipeline.
+final mergeRequestDetailProvider =
+    FutureProvider.family<MergeRequestDetail, MrRef>(
+      (ref, mr) => ref
+          .watch(gitlabRepositoryProvider)
+          .mergeRequestDetail(projectId: mr.projectId, iid: mr.iid),
+    );
