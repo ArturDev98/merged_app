@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
+import 'core/theme_mode_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/summary/summary_screen.dart';
 import 'shared/state_views.dart';
 
-class MergedApp extends StatelessWidget {
+class MergedApp extends ConsumerWidget {
   const MergedApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'Merged',
       debugShowCheckedModeBanner: false,
@@ -20,6 +21,7 @@ class MergedApp extends StatelessWidget {
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
+      themeMode: ref.watch(themeModeProvider),
       home: const _AuthGate(),
     );
   }
@@ -35,6 +37,13 @@ class _AuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
+
+    // Si cualquier pantalla topa con una sesión revocada, el gate devuelve al
+    // login solo. Antes el usuario se quedaba mirando un error sin salida:
+    // AuthService ya había borrado los tokens, pero nadie recalculaba la sesión.
+    ref.listen(sessionExpiredProvider, (previous, next) {
+      if (next) ref.invalidate(sessionProvider);
+    });
 
     return session.when(
       loading: () =>

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
+import '../../core/theme_mode_controller.dart';
 import '../../shared/activity_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../activity/push_detail_screen.dart';
+import '../branches/branches_screen.dart';
 import '../merge_requests/merge_requests_screen.dart';
 import '../pending/pending_screen.dart';
 import '../projects/projects_screen.dart';
@@ -25,6 +27,26 @@ class SummaryScreen extends ConsumerWidget {
         title: const Text('Merged'),
         actions: [
           const _PendingBell(),
+          PopupMenuButton<ThemeMode>(
+            tooltip: 'Tema',
+            icon: Icon(themeModeIcon(ref.watch(themeModeProvider))),
+            initialValue: ref.watch(themeModeProvider),
+            onSelected: (mode) =>
+                ref.read(themeModeProvider.notifier).set(mode),
+            itemBuilder: (context) => [
+              for (final mode in ThemeMode.values)
+                PopupMenuItem(
+                  value: mode,
+                  child: Row(
+                    children: [
+                      Icon(themeModeIcon(mode), size: 18),
+                      const SizedBox(width: 10),
+                      Text(themeModeLabel(mode)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
@@ -37,6 +59,8 @@ class SummaryScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
+          ref.read(gitlabRepositoryProvider).cache.markFresh();
+          ref.invalidate(recentEventsProvider);
           ref.invalidate(activitySummaryProvider);
           ref.invalidate(pendingWorkProvider);
           ref.invalidate(myOpenMergeRequestsProvider);
@@ -53,6 +77,7 @@ class SummaryScreen extends ConsumerWidget {
           },
           child: CustomScrollView(
             slivers: [
+              const SliverToBoxAdapter(child: _OfflineBanner()),
               const SliverToBoxAdapter(child: _UserHeader()),
               const SliverToBoxAdapter(child: _Counters()),
               SliverToBoxAdapter(
@@ -198,6 +223,50 @@ class _PendingBell extends ConsumerWidget {
   }
 }
 
+/// Avisa de que lo que se ve viene de disco y no de GitLab.
+///
+/// Sin este aviso, unos datos guardados de hace horas son indistinguibles de
+/// datos recién traídos, que es la peor forma de fallar sin conexión.
+class _OfflineBanner extends ConsumerWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cache = ref.watch(gitlabRepositoryProvider).cache;
+    final theme = Theme.of(context);
+
+    return ValueListenableBuilder<DateTime?>(
+      valueListenable: cache.servingFrom,
+      builder: (context, savedAt, _) {
+        if (savedAt == null) return const SizedBox.shrink();
+        return Container(
+          width: double.infinity,
+          color: theme.colorScheme.tertiaryContainer,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 16,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Sin conexión · datos guardados ${relativeTime(savedAt)}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onTertiaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _UserHeader extends ConsumerWidget {
   const _UserHeader();
 
@@ -300,6 +369,9 @@ class _Counters extends ConsumerWidget {
             hint: '30 días',
             value: activity.valueOrNull?.branchesCreated,
             loading: activity.isLoading,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const BranchesScreen()),
+            ),
           ),
           _StatCard(
             label: 'MRs abiertos',

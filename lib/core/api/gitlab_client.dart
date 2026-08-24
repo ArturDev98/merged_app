@@ -13,9 +13,18 @@ class SessionExpiredException implements Exception {
 /// Una página de resultados de la API, con la info de paginación que GitLab
 /// devuelve en cabeceras (no en el cuerpo).
 class Page<T> {
-  const Page({required this.items, this.nextPage, this.total});
+  const Page({
+    required this.items,
+    required this.raw,
+    this.nextPage,
+    this.total,
+  });
 
   final List<T> items;
+
+  /// El JSON tal cual llegó. Lo usa la caché para poder reconstruir la página
+  /// sin que los modelos tengan que saber serializarse.
+  final List<Map<String, dynamic>> raw;
 
   /// Cabecera `x-next-page`. Null si esta es la última página.
   final int? nextPage;
@@ -76,11 +85,12 @@ class GitlabClient {
     );
     _ensureOk(response);
 
-    final raw = response.data as List<dynamic>;
+    final raw = (response.data as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
     return Page<T>(
-      items: raw
-          .map((e) => parse(e as Map<String, dynamic>))
-          .toList(growable: false),
+      items: raw.map(parse).toList(growable: false),
+      raw: raw,
       nextPage: _intHeader(response, 'x-next-page'),
       total: _intHeader(response, 'x-total'),
     );

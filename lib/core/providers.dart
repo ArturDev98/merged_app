@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'api/gitlab_client.dart';
 import 'auth/auth_service.dart';
 import 'data/gitlab_repository.dart';
 import 'data/pending_work.dart';
@@ -84,9 +85,31 @@ class ActivitySummary {
   final int projectsTouched;
 }
 
-final activitySummaryProvider = FutureProvider<ActivitySummary>((ref) async {
+/// Eventos de la ventana reciente, en crudo.
+///
+/// Lo consumen los contadores del resumen y la pantalla de ramas. Al ser un
+/// único provider, ambas superficies comparten la misma descarga en lugar de
+/// pedir los mismos eventos dos veces.
+final recentEventsProvider = FutureProvider<List<ActivityEvent>>((ref) {
   final since = DateTime.now().subtract(activityWindow);
-  final events = await ref.watch(gitlabRepositoryProvider).eventsSince(since);
+  return ref.watch(gitlabRepositoryProvider).eventsSince(since);
+});
+
+/// Ramas creadas en la ventana, deducidas de los propios eventos.
+///
+/// No hay llamada extra: una rama nueva es un push con `action == created` y
+/// `ref_type == branch`.
+final createdBranchesProvider = FutureProvider<List<ActivityEvent>>((
+  ref,
+) async {
+  final events = await ref.watch(recentEventsProvider.future);
+  return events
+      .where((e) => e.pushData?.createsBranch ?? false)
+      .toList(growable: false);
+});
+
+final activitySummaryProvider = FutureProvider<ActivitySummary>((ref) async {
+  final events = await ref.watch(recentEventsProvider.future);
 
   var pushes = 0;
   var commits = 0;
@@ -277,3 +300,18 @@ final mergeRequestDetailProvider =
           .watch(gitlabRepositoryProvider)
           .mergeRequestDetail(projectId: mr.projectId, iid: mr.iid),
     );
+
+/// Verdadero en cuanto alguna consulta falla por sesión revocada.
+///
+/// El interceptor ya borra los tokens ante un 401 irrecuperable, pero eso solo
+/// no devuelve al usuario al login: la pantalla se queda con un error del que
+/// no puede salir. Este provider observa las superficies principales y avisa al
+/// gate para que recalcule la sesión.
+final sessionExpiredProvider = Provider<bool>((ref) {
+  bool expired(AsyncValue<Object?> value) =>
+      value.hasError && value.error is SessionExpiredException;
+
+  return expired(ref.watch(currentUserProvider)) ||
+      expired(ref.watch(activityFeedProvider)) ||
+      expired(ref.watch(projectsProvider));
+});

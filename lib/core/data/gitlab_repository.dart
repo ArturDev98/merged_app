@@ -6,13 +6,41 @@ import '../models/merge_request_summary.dart';
 import '../models/activity_event.dart';
 import '../models/repo_commit.dart';
 import '../models/todo_item.dart';
+import 'response_cache.dart';
 
 /// Acceso de lectura a GitLab. Traduce endpoints a modelos; no sabe nada de UI.
 class GitlabRepository {
-  GitlabRepository({GitlabClient? client})
-    : _client = client ?? GitlabClient.instance;
+  GitlabRepository({GitlabClient? client, ResponseCache? cache})
+    : _client = client ?? GitlabClient.instance,
+      cache = cache ?? ResponseCache();
 
   final GitlabClient _client;
+
+  /// Última respuesta buena de cada consulta, para poder abrir la app sin
+  /// conexión.
+  final ResponseCache cache;
+
+  /// Pide algo a la red y lo guarda; si la red falla, sirve lo guardado.
+  ///
+  /// Solo se recurre al disco cuando la petición falla de verdad. Nunca se
+  /// devuelve caché en silencio con red disponible, porque entonces el usuario
+  /// no distinguiría datos viejos de datos actuales.
+  Future<List<T>> _networkFirst<T>({
+    required String key,
+    required Future<List<Map<String, dynamic>>> Function() fetch,
+    required T Function(Map<String, dynamic>) parse,
+  }) async {
+    try {
+      final raw = await fetch();
+      await cache.write(key, raw);
+      return raw.map(parse).toList(growable: false);
+    } catch (error) {
+      final cached = await cache.read(key);
+      if (cached == null) rethrow;
+      cache.markServedFromCache(cached.savedAt);
+      return cached.data.map(parse).toList(growable: false);
+    }
+  }
 
   Future<GitlabUser> currentUser() =>
       _client.getOne('/user', parse: GitlabUser.fromJson);
@@ -23,36 +51,60 @@ class GitlabRepository {
   /// Esta lista tiene doble función: es la pantalla de proyectos y además la
   /// tabla que permite traducir el `project_id` de los eventos a un nombre,
   /// dato que el feed de actividad no trae.
-  Future<List<GitlabProject>> memberProjects({int maxPages = 5}) async {
-    final all = <GitlabProject>[];
-    int? page = 1;
-    var guard = 0;
-    while (page != null && guard++ < maxPages) {
-      final result = await _client.getPage(
-        '/projects',
-        query: {
-          'membership': true,
-          'simple': true,
-          'order_by': 'last_activity_at',
-        },
-        page: page,
-        perPage: 100,
+  Future<List<GitlabProject>> memberProjects({int maxPages = 5}) =>
+      _networkFirst(
+        key: 'projects',
         parse: GitlabProject.fromJson,
+        fetch: () async {
+          final all = <Map<String, dynamic>>[];
+          int? page = 1;
+          var guard = 0;
+          while (page != null && guard++ < maxPages) {
+            final result = await _client.getPage(
+              '/projects',
+              query: {
+                'membership': true,
+                'simple': true,
+                'order_by': 'last_activity_at',
+              },
+              page: page,
+              perPage: 100,
+              parse: GitlabProject.fromJson,
+            );
+            all.addAll(result.raw);
+            page = result.nextPage;
+          }
+          return all;
+        },
       );
-      all.addAll(result.items);
-      page = result.nextPage;
-    }
-    return all;
-  }
 
   /// Una página del feed de actividad.
-  Future<Page<ActivityEvent>> events({int page = 1, int perPage = 30}) =>
-      _client.getPage(
+  Future<Page<ActivityEvent>> events({int page = 1, int perPage = 30}) async {
+    try {
+      final result = await _client.getPage(
         '/events',
         page: page,
         perPage: perPage,
         parse: ActivityEvent.fromJson,
       );
+      // Solo se guarda la primera página: es lo que hace falta para que la app
+      // abra con contenido sin conexión, y evita acumular el feed entero.
+      if (page == 1) await cache.write('events_feed', result.raw);
+      return result;
+    } catch (error) {
+      if (page != 1) rethrow;
+      final cached = await cache.read('events_feed');
+      if (cached == null) rethrow;
+      cache.markServedFromCache(cached.savedAt);
+      return Page<ActivityEvent>(
+        items: cached.data.map(ActivityEvent.fromJson).toList(growable: false),
+        raw: cached.data,
+        // Sin red no se puede paginar: no se ofrece una siguiente página que
+        // fallaría al pedirla.
+        nextPage: null,
+      );
+    }
+  }
 
   /// Eventos posteriores a una fecha, siguiendo la paginación hasta un tope.
   ///
@@ -65,21 +117,27 @@ class GitlabRepository {
     int maxPages = 4,
     int perPage = 100,
   }) async {
-    final all = <ActivityEvent>[];
-    int? page = 1;
-    var guard = 0;
-    while (page != null && guard++ < maxPages) {
-      final result = await _client.getPage(
-        '/events',
-        query: {'after': _isoDate(since)},
-        page: page,
-        perPage: perPage,
-        parse: ActivityEvent.fromJson,
-      );
-      all.addAll(result.items);
-      page = result.nextPage;
-    }
-    return all;
+    return _networkFirst(
+      key: 'events_since',
+      parse: ActivityEvent.fromJson,
+      fetch: () async {
+        final all = <Map<String, dynamic>>[];
+        int? page = 1;
+        var guard = 0;
+        while (page != null && guard++ < maxPages) {
+          final result = await _client.getPage(
+            '/events',
+            query: {'after': _isoDate(since)},
+            page: page,
+            perPage: perPage,
+            parse: ActivityEvent.fromJson,
+          );
+          all.addAll(result.raw);
+          page = result.nextPage;
+        }
+        return all;
+      },
+    );
   }
 
   static String _isoDate(DateTime date) =>

@@ -162,12 +162,13 @@ lib/
 - [x] **"Abrir en GitLab"** con `web_url`: en una app de solo lectura es la
       válvula de escape imprescindible
 
-### Fase 4 — Ramas y pulido
+### Fase 4 — Ramas y pulido — ✅ completada
 
-- [ ] Ramas creadas, derivadas de los eventos
-- [ ] Tema claro/oscuro, icono, splash
-- [ ] Caché offline
-- [ ] Sesión expirada y logout
+- [x] Ramas creadas, derivadas de los eventos (sin llamadas extra)
+- [x] Tema claro/oscuro con selector persistente, e icono adaptativo
+- [ ] Splash propio (sigue el del template)
+- [x] Caché offline: última respuesta buena, con aviso de datos guardados
+- [x] Sesión expirada: el gate vuelve al login solo
 
 ---
 
