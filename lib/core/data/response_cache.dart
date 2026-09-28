@@ -11,12 +11,8 @@ class CachedResponse {
   final DateTime savedAt;
 }
 
-/// Guarda la última respuesta buena de cada consulta para poder abrir la app
-/// sin conexión.
-///
-/// Almacena el JSON crudo, no los modelos: así un cambio en un modelo no
-/// invalida lo ya guardado ni obliga a escribir serializadores en los dos
-/// sentidos.
+/// Última respuesta buena de cada consulta, para abrir sin conexión. Guarda
+/// el JSON crudo: un cambio de modelo no invalida lo guardado.
 class ResponseCache {
   ResponseCache();
 
@@ -24,9 +20,8 @@ class ResponseCache {
 
   SharedPreferences? _prefs;
 
-  /// Fecha de los datos que se están sirviendo desde disco, o null si todo lo
-  /// que se ve viene de la red. La UI lo observa para avisar de que está
-  /// mirando información guardada.
+  /// Fecha de lo que se sirve desde disco, o null si todo viene de la red.
+  /// La UI lo observa para avisar.
   final ValueNotifier<DateTime?> servingFrom = ValueNotifier(null);
 
   Future<SharedPreferences> get _store async =>
@@ -75,9 +70,8 @@ class ResponseCache {
     }
   }
 
-  /// Registra que se está sirviendo información guardada. Se queda con la más
-  /// antigua de la pantalla, que es la que marca la antigüedad real de lo que
-  /// el usuario ve.
+  /// Se queda con la fecha más antigua de la pantalla: es la que marca la
+  /// antigüedad real de lo que se ve.
   void markServedFromCache(DateTime savedAt) {
     final current = servingFrom.value;
     if (current == null || savedAt.isBefore(current)) {

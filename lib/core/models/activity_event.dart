@@ -4,13 +4,8 @@ import 'gitlab_user.dart';
 /// o borrarla.
 enum PushAction { created, pushed, removed, unknown }
 
-/// Un evento de `/events`.
-///
-/// No todos son pushes: el feed trae también `opened` (un MR abierto) y
-/// `joined`. Por eso `pushData` es opcional y existe `isPush`.
-///
-/// Ojo: el payload trae `project_id` pero **no** el nombre del proyecto, así
-/// que la UI necesita resolverlo contra la lista de proyectos.
+/// Un evento de `/events`. No todos son pushes, y trae `project_id` pero no
+/// el nombre del proyecto: la UI lo resuelve con la lista de proyectos.
 class ActivityEvent {
   const ActivityEvent({
     required this.id,
@@ -116,15 +111,12 @@ class PushData {
   /// puede expandirlo.
   bool get isDegraded => commitCount == 0 || commitTo == null;
 
-  /// Hay un destino con el que comparar. **No** implica que haya base: en las
-  /// creaciones de rama (`pushed new`) GitLab manda `commit_from` nulo, porque
-  /// antes de ese push no existía nada con lo que comparar.
+  /// Hay destino con el que comparar, pero no necesariamente base: al crear
+  /// una rama GitLab manda `commit_from` nulo.
   bool get hasTarget => commitTo != null && !isDegraded;
 
-  /// Si hace falta suplir la base con la rama por defecto del proyecto.
-  ///
-  /// Era la causa de que un tercio del feed mostrara "sin detalle de commits":
-  /// toda rama recién creada entraba por aquí.
+  /// Falta la base y se suple con la rama por defecto: pasa en toda rama
+  /// recién creada.
   bool get needsBaseFallback => hasTarget && commitFrom == null;
 
   factory PushData.fromJson(Map<String, dynamic> json) => PushData(

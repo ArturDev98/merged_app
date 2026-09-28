@@ -12,9 +12,8 @@ class PipelineInfo {
 
   final int id;
 
-  /// "success", "failed", "running", "pending", "canceled", "skipped",
-  /// "created", "manual"… Se guarda tal cual: inventar un enum cerrado haría
-  /// que un estado nuevo de GitLab se perdiera en silencio.
+  /// "success", "failed", "running"… Texto y no enum: un estado nuevo de
+  /// GitLab se perdería en silencio.
   final String status;
 
   final String? ref;
@@ -30,12 +29,8 @@ class PipelineInfo {
   );
 }
 
-/// Merge request con lo que solo devuelve el endpoint de detalle.
-///
-/// Se comprobó contra la API real que la **lista** no incluye `head_pipeline`,
-/// así que el estado del pipeline únicamente puede mostrarse aquí. Por eso el
-/// detalle es un modelo aparte y no un campo opcional del resumen: el tipo
-/// impide prometer en la lista algo que la lista no trae.
+/// Merge request con lo que solo trae el detalle: la lista no incluye
+/// `head_pipeline` (comprobado), así que el tipo impide prometerlo allí.
 class MergeRequestDetail {
   const MergeRequestDetail({
     required this.summary,
@@ -46,6 +41,7 @@ class MergeRequestDetail {
     this.detailedMergeStatus,
     this.mergedAt,
     this.closedAt,
+    this.changesCount,
   });
 
   final MergeRequestSummary summary;
@@ -64,6 +60,14 @@ class MergeRequestDetail {
   final DateTime? mergedAt;
   final DateTime? closedAt;
 
+  /// Archivos cambiados. GitLab lo manda como texto y lo corta en "1000+";
+  /// llega vacío mientras calcula el diff de un MR recién creado.
+  final String? changesCount;
+
+  /// El número, o null si no llegó. "1000+" cuenta como 1000.
+  int? get changedFiles =>
+      int.tryParse(changesCount?.replaceAll('+', '') ?? '');
+
   factory MergeRequestDetail.fromJson(Map<String, dynamic> json) {
     // `pipeline` es el nombre antiguo del mismo dato; se consulta como
     // respaldo por si la instancia es vieja.
@@ -80,6 +84,7 @@ class MergeRequestDetail {
       detailedMergeStatus: json['detailed_merge_status'] as String?,
       mergedAt: DateTime.tryParse(json['merged_at'] as String? ?? ''),
       closedAt: DateTime.tryParse(json['closed_at'] as String? ?? ''),
+      changesCount: json['changes_count']?.toString(),
     );
   }
 }

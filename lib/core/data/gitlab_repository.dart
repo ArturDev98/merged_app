@@ -4,7 +4,7 @@ import '../models/gitlab_user.dart';
 import '../models/merge_request_detail.dart';
 import '../models/merge_request_summary.dart';
 import '../models/activity_event.dart';
-import '../models/repo_commit.dart';
+import '../models/file_diff.dart';
 import '../models/todo_item.dart';
 import 'response_cache.dart';
 
@@ -20,11 +20,8 @@ class GitlabRepository {
   /// conexión.
   final ResponseCache cache;
 
-  /// Pide algo a la red y lo guarda; si la red falla, sirve lo guardado.
-  ///
-  /// Solo se recurre al disco cuando la petición falla de verdad. Nunca se
-  /// devuelve caché en silencio con red disponible, porque entonces el usuario
-  /// no distinguiría datos viejos de datos actuales.
+  /// Red primero; el disco solo si la petición falla. Nunca caché en silencio
+  /// con red: los datos viejos se confundirían con los actuales.
   Future<List<T>> _networkFirst<T>({
     required String key,
     required Future<List<Map<String, dynamic>>> Function() fetch,
@@ -45,12 +42,8 @@ class GitlabRepository {
   Future<GitlabUser> currentUser() =>
       _client.getOne('/user', parse: GitlabUser.fromJson);
 
-  /// Proyectos donde el usuario es miembro.
-  ///
-  /// Se pide `simple=true` porque la respuesta completa trae más de 60 campos.
-  /// Esta lista tiene doble función: es la pantalla de proyectos y además la
-  /// tabla que permite traducir el `project_id` de los eventos a un nombre,
-  /// dato que el feed de actividad no trae.
+  /// Proyectos del usuario. `simple=true` porque la completa trae 60+ campos;
+  /// también sirve para poner nombre al `project_id` de los eventos.
   Future<List<GitlabProject>> memberProjects({int maxPages = 5}) =>
       _networkFirst(
         key: 'projects',
@@ -106,12 +99,8 @@ class GitlabRepository {
     }
   }
 
-  /// Eventos posteriores a una fecha, siguiendo la paginación hasta un tope.
-  ///
-  /// Alimenta los contadores del resumen. Se usa el parámetro `after` de la
-  /// API (ISO 8601) para que la ventana sea real y no "lo que haya cargado el
-  /// feed", que daría un número distinto según cuánto hubiera desplazado el
-  /// usuario.
+  /// Eventos desde una fecha, con `after` de la API: así la ventana es real y
+  /// no depende de cuánto feed haya cargado el usuario.
   Future<List<ActivityEvent>> eventsSince(
     DateTime since, {
     int maxPages = 4,
@@ -145,28 +134,39 @@ class GitlabRepository {
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
 
-  /// Commits reales de un push.
-  ///
-  /// Es la única forma de obtenerlos: los eventos solo traen el título del
-  /// último commit. Se llama al abrir el detalle de un push, nunca al pintar
-  /// la lista, para no convertir el feed en un N+1.
-  Future<List<RepoCommit>> commitsForPush({
+  /// Commits y archivos de un push en una sola llamada. Solo al abrir el
+  /// detalle, nunca al pintar el feed: sería un N+1.
+  Future<Comparison> compare({
     required int projectId,
     required String from,
     required String to,
-  }) async {
-    final result = await _client.getOne(
-      '/projects/$projectId/repository/compare',
-      query: {'from': from, 'to': to},
-      parse: (json) => json,
-    );
-    final commits = result['commits'];
-    if (commits is! List) return const [];
-    return commits
-        .whereType<Map<String, dynamic>>()
-        .map(RepoCommit.fromJson)
-        .toList(growable: false);
-  }
+  }) => _client.getOne(
+    '/projects/$projectId/repository/compare',
+    query: {'from': from, 'to': to},
+    parse: Comparison.fromJson,
+  );
+
+  /// Archivos cambiados por un commit. GitLab deja de añadir archivos al
+  /// llegar a sus límites de diff: si hay página siguiente, faltan archivos.
+  Future<Page<FileDiff>> commitDiff({
+    required int projectId,
+    required String sha,
+  }) => _client.getPage(
+    '/projects/$projectId/repository/commits/$sha/diff',
+    perPage: 100,
+    parse: FileDiff.fromJson,
+  );
+
+  /// Archivos cambiados por un merge request. La API no sirve más de 30 por
+  /// página aunque se pidan más.
+  Future<Page<FileDiff>> mergeRequestDiffs({
+    required int projectId,
+    required int iid,
+  }) => _client.getPage(
+    '/projects/$projectId/merge_requests/$iid/diffs',
+    perPage: 30,
+    parse: FileDiff.fromJson,
+  );
 
   /// Merge requests por scope: `created_by_me`, `assigned_to_me` o
   /// `reviews_for_me`.
@@ -183,10 +183,8 @@ class GitlabRepository {
     parse: MergeRequestSummary.fromJson,
   );
 
-  /// Un merge request concreto, con lo que la lista no trae.
-  ///
-  /// El endpoint por proyecto usa el `iid` (el número visible, !450), no el
-  /// `id` global que devuelve la lista.
+  /// Detalle de un MR, con lo que la lista no trae. Va por `iid` (el número
+  /// visible, !450), no por el `id` global de la lista.
   Future<MergeRequestDetail> mergeRequestDetail({
     required int projectId,
     required int iid,

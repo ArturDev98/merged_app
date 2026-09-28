@@ -3,12 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/models/activity_event.dart';
 import '../core/theme/app_theme.dart';
 
-/// Traduce `action_name` de GitLab a una frase en primera persona.
-///
-/// La API devuelve etiquetas en inglés y pensadas para un feed en tercera
-/// persona ("joined", "pushed to"). Sin traducirlas, un evento de alta en un
-/// proyecto se mostraba con el nombre del proyecto repetido en el título y en
-/// el subtítulo, sin decir en ningún momento qué había ocurrido.
+/// `action_name` de GitLab ("joined", "pushed to") en una frase en primera
+/// persona que diga qué pasó.
 String describeActivity(ActivityEvent event) {
   final push = event.pushData;
   if (push != null) {

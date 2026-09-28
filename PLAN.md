@@ -6,10 +6,12 @@ merge requests, sus commits, sus ramas y sus proyectos.
 
 - **Destino:** app pública. Se valida primero con la cuenta del autor, pero se
   diseña para cualquier usuario de GitLab.
-- **Alcance v0.1:** solo lectura (`read_api` + `read_user`, ya validados).
+- **Alcance v0.1:** lectura, más aprobar merge requests (scope `api` +
+  `read_user`; ver "Decisiones").
 - **Instancia:** solo gitlab.com. Plataforma: Android. Idioma: español. Ver
   "Decisiones".
-- **Ruta:** pulir la interfaz → beta repartiendo el APK → Play Store.
+- **Ruta:** ver los cambios → aprobar MRs → detalle de proyecto → beta
+  repartiendo el APK → Play Store.
 
 ---
 
@@ -183,11 +185,10 @@ lib/
 Fases 3 y 4 validadas en el teléfono el 2026-09-27: datos y navegación
 correctos. El splash pasa a la fase 5.
 
-### Fase 5 — Pulido de interfaz
+### Fase 5 — Pulido de interfaz — ✅ completada
 
 - [x] Nombre visible "Merged" en Android, iOS y web
 - [x] Splash propio, claro y oscuro, también con la API de Android 12+
-      (falta verlo en el teléfono)
 - [x] Modo demo para revisar la interfaz en el navegador, sin login ni red:
       `flutter run -d chrome -t lib/demo/main_demo.dart`
 - [x] Dirección visual «Viva»: fuente Outfit incluida en la app, teal de marca,
@@ -198,16 +199,60 @@ correctos. El splash pasa a la fase 5.
 - [x] Las etiquetas (tags) nuevas ya no se anuncian como ramas
 - [x] Textos del framework en español (`flutter_localizations`) y plurales
       bien concordados
-- [ ] Revisar en el teléfono y ajustar lo que salga
+- [x] Validada en el teléfono con APK de release el 2026-09-28: login,
+      navegación, temas y datos reales correctos. Solo salió "hace 1 meses",
+      ya corregido
 
-### Fase 6 — Beta por APK
+### Fase 6 — Ver los cambios
+
+Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
+
+- [x] Modelo y parser del diff unificado de GitLab, con números de línea y
+      contadores de líneas añadidas y quitadas por archivo
+- [x] **Push:** archivos cambiados bajo la lista de commits. `compare`, que ya
+      se llama al abrir el push, trae `diffs`: **sin llamada extra**
+- [x] **Commit:** pantalla propia al tocarlo (antes abría GitLab), con
+      `GET /projects/:id/repository/commits/:sha/diff`
+- [x] **Merge request:** sección de cambios en el detalle, con
+      `GET …/merge_requests/:iid/diffs`. Hasta 30 archivos (una página de la
+      API) se ven en la app; con más, o con `"1000+"`, un botón a GitLab
+- [x] Lo que GitLab no entrega entero (`too_large`, `collapsed`,
+      `compare_timeout`, binarios) se dice y lleva a GitLab. Más de 400 líneas
+      en un archivo, también
+- [x] JetBrains Mono incluida para el código: la `monospace` del sistema no
+      existe en web y en Android cambia según el fabricante
+- [x] Datos de diffs en el modo demo, con los casos límite
+- [ ] Probar en el teléfono con pushes y MRs reales, incluido uno grande
+
+### Fase 7 — Aprobar merge requests
+
+- [ ] Scope `api` en lugar de `read_api`: añadirlo a "Merged (Dev)" en GitLab
+      (lo hace el autor) y pedirlo en `AuthService`. Obliga a volver a iniciar
+      sesión una vez
+- [ ] Aprobar y quitar la aprobación (`POST …/approve`, `…/unapprove`,
+      disponibles en todos los planes, incluido Free), con confirmación y
+      estado de quién ha aprobado
+- [ ] "Denegar" no existe en la API. Decidir la alternativa: quitar la
+      aprobación, dejar un comentario pidiendo cambios o cerrar el MR
+- [ ] Retirar el "solo lectura" del login, el README y los textos
+- [ ] Probar con un MR real asignado por un compañero: la cuenta del autor
+      nunca tiene MRs para revisar
+
+### Fase 8 — Detalle de proyecto
+
+- [ ] Pantalla de proyecto con ramas, últimos commits, MRs y pipelines
+      (`/repository/branches`, `/repository/commits`, `/merge_requests`,
+      `/pipelines`). Cada pestaña carga al abrirla
+- [ ] Tocar un proyecto abre esta pantalla; GitLab queda a un toque
+
+### Fase 9 — Beta por APK
 
 Validar con usuarios reales antes de pagar Play Console.
 
-- [ ] App OAuth de producción en un grupo de gitlab.com y su `client_id` en la
-      app. Va **antes** de repartir: la pantalla de autorización de GitLab
-      enseña quién creó la app, y los testers no deben autorizar la de dev
-- [ ] Versión `0.1.0+1`, descripción de `pubspec.yaml` y README reales
+- [ ] App OAuth de producción en un grupo de gitlab.com, **registrada ya con
+      el scope `api`**, y su `client_id` en la app. Va antes de repartir: la
+      pantalla de autorización enseña quién creó la app
+- [ ] Versión `0.1.0+1` y descripción de `pubspec.yaml`
 - [ ] Versión visible dentro de la app, para saber qué APK tiene quien reporta
 - [ ] Firma de release propia (`key.properties` fuera de git). Con la de debug,
       un APK solo actualiza a otro si ambos se compilaron en este PC
@@ -215,7 +260,7 @@ Validar con usuarios reales antes de pagar Play Console.
 - [ ] Buscar testers con otro perfil: revisores o asignados a MRs. La campana y
       la lista de MRs "a revisar" nunca tienen datos con la cuenta del autor
 
-### Fase 7 — Publicación en Play
+### Fase 10 — Publicación en Play
 
 - [ ] Cuenta de Play Console (25 USD, pago único)
 - [ ] Política de privacidad en una URL pública y formulario de seguridad de
@@ -227,30 +272,46 @@ Validar con usuarios reales antes de pagar Play Console.
 
 ---
 
-## Decisiones (2026-09-27)
+## Decisiones
 
-- **Solo gitlab.com en la v0.1.** Soportar instancias self-managed no es solo
-  cambiar `GitlabClient.baseUrl`: el `client_id` de OAuth pertenece a la
-  instancia donde se registró y no existe en las demás. Queda para la v0.2,
-  entrando con un Personal Access Token.
-- **App OAuth de producción en un grupo de gitlab.com**, no en una cuenta
-  concreta: si la cuenta dueña se desactiva, el login cae para todos. El
+- **Solo gitlab.com en la v0.1** (2026-09-27). Soportar instancias
+  self-managed no es solo cambiar `GitlabClient.baseUrl`: el `client_id` de
+  OAuth pertenece a la instancia donde se registró y no existe en las demás.
+  Queda para la v0.2, entrando con un Personal Access Token.
+- **App OAuth de producción en un grupo de gitlab.com** (2026-09-27), no en una
+  cuenta concreta: si la cuenta dueña se desactiva, el login cae para todos. El
   `client_id` viaja en el binario, lo cual es correcto para un cliente público
   con PKCE. "Merged (Dev)" se queda para desarrollo.
-- **Solo español en la v0.1.** El inglés llega en la v0.2 con `gen-l10n`.
-- **Solo Android en la v0.1.** iOS requiere compilar en un Mac.
+- **Solo español en la v0.1** (2026-09-27). El inglés llega en la v0.2 con
+  `gen-l10n`.
+- **Solo Android en la v0.1** (2026-09-27). iOS requiere compilar en un Mac.
+- **Aprobar MRs entra en la primera versión pública** (2026-09-28). Pide el
+  scope `api` desde el primer login, así que ningún usuario público tendrá que
+  volver a autorizar; el único que lo hace es el autor, al pasar de la versión
+  de desarrollo.
 
 ## Fuera de la v0.1
 
-Acciones de escritura (aprobar, comentar, marcar todos), issues, pipelines como
-sección propia, notificaciones push, búsqueda global, instancias self-managed,
-inglés, iOS.
+Comentar y marcar pendientes como hechos, issues, pipelines como sección propia,
+notificaciones push, búsqueda global, instancias self-managed, inglés, iOS.
 
 ---
 
 ## Cuidado al actualizar el template de Flutter
 
 `android/app/src/main/AndroidManifest.xml` tiene dos desviaciones deliberadas del
-template, ambas necesarias para que el login OAuth vuelva a la app. Están
-documentadas en el propio archivo. Un `flutter create` encima puede reintroducir
-el fallo de forma silenciosa.
+template, ambas necesarias para que el login OAuth (flutter_appauth) vuelva a la
+app. Un `flutter create` encima puede reintroducir el fallo de forma silenciosa.
+
+1. **Sin intent-filter para `dev.merged.app://callback` en `MainActivity`.**
+   AppAuth ya registra su propia `RedirectUriReceiverActivity` con ese esquema,
+   vía el `manifestPlaceholder` `appAuthRedirectScheme` de `build.gradle.kts`.
+   Si también se declara en `MainActivity`, Android ve dos candidatos para la
+   misma URI y el código de autorización acaba donde AppAuth nunca lo recibe.
+2. **Sin el `android:taskAffinity=""` que trae el template.**
+   `AuthorizationManagementActivity` es `singleTask` y, al volver del
+   navegador, necesita reencontrar su propia instancia. Una afinidad vacía
+   significa "sin afinidad": crea una instancia nueva y sin estado, y AppAuth
+   descarta la respuesta con "No stored state - unable to handle response" (el
+   login se queda colgado tras autorizar). `MainActivity` debe compartir la
+   afinidad por defecto con las activities de AppAuth.

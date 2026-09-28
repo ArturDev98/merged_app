@@ -15,11 +15,8 @@ enum AuthFailureKind {
   unknown,
 }
 
-/// Un fallo de autenticación ya traducido.
-///
-/// Existe para que la pantalla de login no tenga que enseñar el `toString()` de
-/// una excepción: antes, cancelar el login pintaba en rojo un volcado de
-/// `FlutterAppAuthUserCancelledException` con `platformErrorDetails` incluido.
+/// Fallo de autenticación ya traducido, para no enseñar en el login el
+/// `toString()` de la excepción.
 class AuthFailure {
   const AuthFailure({
     required this.kind,
@@ -92,9 +89,8 @@ class AuthFailure {
     );
   }
 
-  /// El fallo de red llega envuelto de formas distintas según la plataforma y
-  /// el momento (resolución DNS, descarga del documento de descubrimiento), así
-  /// que se reconoce por el código y, en su defecto, por el mensaje.
+  /// El fallo de red llega envuelto distinto según plataforma y momento: se
+  /// reconoce por el código y, si no, por el mensaje.
   static bool _looksLikeNetwork(PlatformException error) {
     if (error.code == 'discovery_failed') return true;
     final text = '${error.message ?? ''} ${error.details ?? ''}'.toLowerCase();

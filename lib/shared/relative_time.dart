@@ -11,8 +11,12 @@ String relativeTime(DateTime? date, {DateTime? now}) {
   if (diff.inDays == 1) return 'ayer';
   if (diff.inDays < 7) return 'hace ${diff.inDays} días';
   if (diff.inDays < 30) return 'hace ${(diff.inDays / 7).floor()} sem';
-  if (diff.inDays < 365) return 'hace ${(diff.inDays / 30).floor()} meses';
-  return 'hace ${(diff.inDays / 365).floor()} años';
+  if (diff.inDays < 365) {
+    final months = (diff.inDays / 30).floor();
+    return months == 1 ? 'hace 1 mes' : 'hace $months meses';
+  }
+  final years = (diff.inDays / 365).floor();
+  return years == 1 ? 'hace 1 año' : 'hace $years años';
 }
 
 const _weekdays = [

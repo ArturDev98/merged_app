@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Preferencia de tema del usuario, persistida entre arranques.
-///
-/// El valor por defecto es seguir al sistema: es lo que la mayoría espera, y
-/// solo se guarda algo cuando el usuario elige explícitamente otra cosa.
+/// Tema elegido por el usuario, persistido. Por defecto sigue al sistema y
+/// solo se guarda algo si elige otra cosa.
 class ThemeModeController extends Notifier<ThemeMode> {
   static const _key = 'theme_mode';
 

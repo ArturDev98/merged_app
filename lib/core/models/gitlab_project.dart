@@ -1,11 +1,5 @@
-/// Proyecto de GitLab.
-///
-/// Se pide con `simple=true`: la respuesta completa trae más de 60 campos
-/// (políticas de registry, feature flags, niveles de acceso…) que no usamos.
-///
-/// Además de la pantalla de proyectos, esta lista sirve de tabla de búsqueda:
-/// los eventos solo traen `project_id`, así que sin este mapa el feed de
-/// actividad no puede mostrar a qué proyecto pertenece cada push.
+/// Proyecto de GitLab, pedido con `simple=true` (la respuesta completa trae
+/// 60+ campos). También nombra el `project_id` de los eventos.
 class GitlabProject {
   const GitlabProject({
     required this.id,

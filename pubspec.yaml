@@ -66,7 +66,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/fonts/OFL.txt
+    - assets/fonts/OFL-Outfit.txt
+    - assets/fonts/OFL-JetBrainsMono.txt
 
   fonts:
     - family: Outfit
@@ -78,6 +79,9 @@ flutter:
           weight: 600
         - asset: assets/fonts/Outfit-Bold.ttf
           weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

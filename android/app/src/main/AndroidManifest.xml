@@ -3,24 +3,8 @@
         android:label="Merged"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- OJO con dos cosas en esta activity, ambas necesarias para que el
-             login OAuth de GitLab (flutter_appauth) pueda volver a la app:
-
-             1. NO declarar aquí un intent-filter para dev.merged.app://callback.
-                AppAuth ya registra su propia RedirectUriReceiverActivity con ese
-                esquema, vía el manifestPlaceholder appAuthRedirectScheme del
-                build.gradle.kts. Si lo declaramos también aquí, Android ve dos
-                candidatos para la misma URI y el código de autorización acaba en
-                MainActivity, donde AppAuth nunca lo recibe.
-
-             2. NO usar el android:taskAffinity="" que trae el template de Flutter.
-                AuthorizationManagementActivity es launchMode="singleTask" y, al
-                volver del navegador, necesita reencontrar SU propia instancia.
-                Una afinidad vacía significa "sin afinidad", así que no la
-                encuentra: crea una instancia nueva y sin estado, y AppAuth
-                descarta la respuesta con "No stored state - unable to handle
-                response" (el login se queda colgado tras autorizar). MainActivity
-                debe compartir la afinidad por defecto con las de AppAuth. -->
+        <!-- Sin intent-filter para dev.merged.app://callback y sin el
+             taskAffinity="" del template: ambos rompen el login (ver PLAN.md). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -58,11 +42,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- Necesario para "Abrir en GitLab". Desde targetSdk 30 Android filtra
-             qué paquetes ve la app, y sin declarar esto url_launcher no
-             encuentra ningún navegador: launchUrl devuelve false y el enlace
-             no se abre. En una app de solo lectura eso deja al usuario sin
-             salida hacia GitLab. -->
+        <!-- Para "Abrir en GitLab": desde targetSdk 30, sin esto url_launcher
+             no ve ningún navegador y el enlace no se abre. -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>

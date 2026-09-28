@@ -97,6 +97,10 @@ class DemoPush {
 
 final demoPushesByCommit = <String, DemoPush>{};
 
+/// Qué push y qué posición tiene cada commit generado, para servir su diff.
+final demoPushByCommitSha = <String, DemoPush>{};
+final demoCommitIndex = <String, int>{};
+
 var _nextEventId = 9000;
 
 Map<String, dynamic> _push(
@@ -285,6 +289,8 @@ List<Map<String, dynamic>> demoCommits(DemoPush push, String projectPath) =>
       // compare devuelve del más antiguo al más nuevo; el título del push es el último.
       final isLast = i == push.commits - 1;
       final sha = _sha(push.projectId * 100 + i + push.ref.length);
+      demoPushByCommitSha[sha] = push;
+      demoCommitIndex[sha] = i;
       return {
         'id': sha,
         'short_id': sha.substring(0, 8),
@@ -474,6 +480,7 @@ Map<int, Map<String, dynamic>> demoMergeRequestExtras() {
     String? mergeStatus, {
     String? description,
     int upvotes = 0,
+    required String changes,
   }) {
     final url = (mr['web_url'] as String).split('/-/').first;
     return {
@@ -492,36 +499,40 @@ Map<int, Map<String, dynamic>> demoMergeRequestExtras() {
       'detailed_merge_status': mergeStatus,
       'merged_at': mr['state'] == 'merged' ? mr['updated_at'] : null,
       'closed_at': mr['state'] == 'closed' ? mr['updated_at'] : null,
+      'changes_count': changes,
     };
   }
 
   return {
     5142: extra(
       _mr142,
+      changes: '6',
       'running',
       'ci_still_running',
       description: 'Los webhooks que fallan se reencolan con espera exponencial, hasta 6 intentos.',
     ),
-    5088: extra(_mr88, 'success', 'draft_status'),
+    5088: extra(_mr88, changes: '47', 'success', 'draft_status'),
     5057: extra(
       _mr57,
+      changes: '3',
       'failed',
       'ci_must_pass',
       description:
           'Usa la huella o el rostro cuando el dispositivo lo permite.',
     ),
-    5085: extra(_mr85, 'success', null, upvotes: 2),
-    5080: extra(_mr80, 'canceled', null),
+    5085: extra(_mr85, changes: '2', 'success', null, upvotes: 2),
+    5080: extra(_mr80, changes: '12', 'canceled', null),
     5087: extra(
       _mr87,
+      changes: '4',
       'success',
       'not_approved',
       description: 'Sustituye las llamadas al checkout antiguo por la API v2. Requiere revisar el cálculo de impuestos.',
       upvotes: 1,
     ),
-    5023: extra(_mr23, 'success', 'discussions_not_resolved'),
-    5012: extra(_mr12, null, 'conflict'),
-    5084: extra(_mr84, 'success', null, upvotes: 3),
+    5023: extra(_mr23, changes: '5', 'success', 'discussions_not_resolved'),
+    5012: extra(_mr12, changes: '8', null, 'conflict'),
+    5084: extra(_mr84, changes: '3', 'success', null, upvotes: 3),
   };
 }
 

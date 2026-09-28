@@ -90,10 +90,8 @@ class TonePill extends StatelessWidget {
   }
 }
 
-/// La marca de Merged: dos ramas que confluyen en una.
-///
-/// Reproduce el vector de `ic_launcher_foreground.xml`; si cambia uno, cambia
-/// el otro.
+/// La marca de Merged. Reproduce `ic_launcher_foreground.xml`: si cambia
+/// uno, cambia el otro.
 class MergedMark extends StatelessWidget {
   const MergedMark({super.key, this.size = 96, required this.color});
 

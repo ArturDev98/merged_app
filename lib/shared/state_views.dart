@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../core/api/gitlab_client.dart';
+import '../core/theme/app_theme.dart';
 
 /// Un error ya traducido a algo que se le puede enseñar a una persona.
 class ErrorDescription {
@@ -15,10 +16,8 @@ class ErrorDescription {
   final String title;
   final String message;
 
-  /// Traduce los fallos que la app puede producir de verdad.
-  ///
-  /// Sin esto, quedarse sin cobertura y que GitLab devuelva un 500 se veían
-  /// exactamente igual: un volcado de `DioException`.
+  /// Traduce los fallos reales de la app: sin esto, quedarse sin cobertura
+  /// y un 500 de GitLab se veían igual, como un volcado de `DioException`.
   factory ErrorDescription.from(Object error) {
     if (error is SessionExpiredException) {
       return const ErrorDescription(
@@ -72,10 +71,8 @@ class ErrorDescription {
   }
 }
 
-/// Mensaje de error con reintento.
-///
-/// Muestra el detalle técnico plegado: sin él, un fallo de red y uno de
-/// permisos se ven idénticos y no hay forma de diagnosticar desde el móvil.
+/// Error con reintento y el detalle técnico plegado, para distinguir desde
+/// el móvil un fallo de red de uno de permisos.
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, this.onRetry});
 
@@ -131,7 +128,7 @@ class ErrorView extends StatelessWidget {
                   child: SelectableText(
                     '$error',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      fontFamily: 'monospace',
+                      fontFamily: monoFontFamily,
                       color: scheme.outline,
                     ),
                     textAlign: TextAlign.center,
@@ -146,11 +143,8 @@ class ErrorView extends StatelessWidget {
   }
 }
 
-/// Estado vacío con nombre propio.
-///
-/// En esta app no es un caso borde: varias secciones estarán vacías a diario
-/// según el rol del usuario, y un vacío mal resuelto se confunde con un fallo
-/// de carga.
+/// Estado vacío con nombre propio: varias secciones estarán vacías a
+/// diario, y un vacío mal resuelto parece un fallo de carga.
 class EmptyView extends StatelessWidget {
   const EmptyView({
     super.key,

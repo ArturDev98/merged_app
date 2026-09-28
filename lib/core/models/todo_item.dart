@@ -1,10 +1,7 @@
 import 'gitlab_user.dart';
 
-/// Pendiente de `/todos`.
-///
-/// En la cuenta de desarrollo esta lista siempre viene vacía, pero para un
-/// perfil de revisor es la fuente más llena de la app: de ahí salen las
-/// aprobaciones pendientes, las menciones y los pipelines rotos.
+/// Pendiente de `/todos`: aprobaciones, menciones, pipelines rotos. Vacío en
+/// la cuenta de desarrollo, pero es lo más lleno para un revisor.
 class TodoItem {
   const TodoItem({
     required this.id,
@@ -34,9 +31,8 @@ class TodoItem {
 
   bool get isMergeRequest => targetType == 'MergeRequest';
 
-  /// Clave de deduplicación: un mismo MR puede llegar a la vez como todo de
-  /// aprobación y en la lista de `reviews_for_me`. Sin esto, la franja de
-  /// pendientes lo mostraría dos veces.
+  /// Un mismo MR llega como todo de aprobación y en `reviews_for_me`: sin
+  /// esta clave, la campana lo contaría dos veces.
   String? get dedupeKey => targetUrl?.split('#').first;
 
   factory TodoItem.fromJson(Map<String, dynamic> json) => TodoItem(

@@ -23,6 +23,13 @@ void main() {
     });
   });
 
+  test('relativeTime concuerda en singular: "hace 1 mes", no "1 meses"', () {
+    expect(relativeTime(DateTime(2026, 8, 20), now: now), 'hace 1 mes');
+    expect(relativeTime(DateTime(2026, 6, 1), now: now), 'hace 3 meses');
+    expect(relativeTime(DateTime(2025, 8, 1), now: now), 'hace 1 año');
+    expect(relativeTime(DateTime(2023, 9, 1), now: now), 'hace 3 años');
+  });
+
   test('clockTime rellena con ceros', () {
     expect(clockTime(DateTime(2026, 9, 27, 9, 5)), '09:05');
   });

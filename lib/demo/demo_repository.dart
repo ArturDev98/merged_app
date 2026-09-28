@@ -5,9 +5,10 @@ import '../core/models/gitlab_project.dart';
 import '../core/models/gitlab_user.dart';
 import '../core/models/merge_request_detail.dart';
 import '../core/models/merge_request_summary.dart';
-import '../core/models/repo_commit.dart';
+import '../core/models/file_diff.dart';
 import '../core/models/todo_item.dart';
 import 'demo_data.dart';
+import 'demo_diffs.dart';
 
 /// Repositorio sin red: sirve los datos de `demo_data.dart` por los mismos
 /// `fromJson` que usa la app real.
@@ -51,16 +52,47 @@ class DemoRepository extends GitlabRepository {
         .toList(),
   );
 
+  String _path(int projectId) =>
+      _projects.firstWhere((p) => p['id'] == projectId)['name'] as String;
+
   @override
-  Future<List<RepoCommit>> commitsForPush({
+  Future<Comparison> compare({
     required int projectId,
     required String from,
     required String to,
   }) => _later(() {
     final push = demoPushesByCommit[to];
-    if (push == null) return const [];
-    final path = _projects.firstWhere((p) => p['id'] == projectId)['name'];
-    return demoCommits(push, path as String).map(RepoCommit.fromJson).toList();
+    if (push == null) return const Comparison(commits: [], files: []);
+    final path = _path(projectId);
+    return Comparison.fromJson({
+      'commits': demoCommits(push, path),
+      'diffs': demoPushDiffs(push, path),
+      'compare_timeout': false,
+    });
+  });
+
+  @override
+  Future<Page<FileDiff>> commitDiff({
+    required int projectId,
+    required String sha,
+  }) => _later(() {
+    final raw = demoCommitDiffs(sha, _path(projectId));
+    return Page(items: raw.map(FileDiff.fromJson).toList(), raw: raw);
+  });
+
+  @override
+  Future<Page<FileDiff>> mergeRequestDiffs({
+    required int projectId,
+    required int iid,
+  }) => _later(() {
+    final mr = demoMergeRequests().values
+        .expand((list) => list)
+        .firstWhere((mr) => mr['project_id'] == projectId && mr['iid'] == iid);
+    final changes = int.tryParse(
+      demoMergeRequestExtras()[mr['id']]?['changes_count'] as String? ?? '',
+    );
+    final raw = demoMergeRequestDiffs(mr, _path(projectId), changes ?? 0);
+    return Page(items: raw.map(FileDiff.fromJson).toList(), raw: raw);
   });
 
   @override

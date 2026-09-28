@@ -1,6 +1,5 @@
-/// Usuario de GitLab, tal y como aparece en `/user` y embebido como `author`
-/// en eventos y merge requests. Se queda con lo que la UI necesita: el payload
-/// completo de `/user` trae más de 40 campos que no usamos.
+/// Usuario de GitLab, de `/user` o embebido como `author`. Solo lo que usa
+/// la UI: el payload completo trae 40+ campos.
 class GitlabUser {
   const GitlabUser({
     required this.id,

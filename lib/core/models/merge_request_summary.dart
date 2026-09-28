@@ -1,11 +1,7 @@
 import 'gitlab_user.dart';
 
-/// Merge request tal y como lo devuelve la **lista** (`/merge_requests`).
-///
-/// Se llama "summary" a propósito: comprobado contra la API real, la lista NO
-/// incluye `head_pipeline`, así que el estado del pipeline solo se puede
-/// mostrar en el detalle (`/projects/:id/merge_requests/:iid`). La UI de lista
-/// no debe prometerlo.
+/// Merge request tal como lo da la lista (`/merge_requests`), que no trae
+/// `head_pipeline`: el pipeline solo puede mostrarse en el detalle.
 class MergeRequestSummary {
   const MergeRequestSummary({
     required this.id,

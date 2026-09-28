@@ -1,9 +1,5 @@
-/// Commit real de un repositorio.
-///
-/// Llega de `/projects/:id/repository/compare?from=&to=`, que es la única vía
-/// para obtener los commits concretos de un push: los eventos solo traen el
-/// título del último. Se pide al abrir el detalle de un push, nunca al pintar
-/// la lista.
+/// Commit de un repositorio. Llega de `compare`: los eventos solo traen el
+/// título del último commit de cada push.
 class RepoCommit {
   const RepoCommit({
     required this.id,

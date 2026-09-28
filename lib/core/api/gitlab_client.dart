@@ -37,8 +37,6 @@ class Page<T> {
 }
 
 /// Cliente HTTP contra la API v4 de GitLab.
-///
-/// Solo lectura: los scopes de la app son `read_api` + `read_user`.
 class GitlabClient {
   GitlabClient._internal() {
     _dio = Dio(
@@ -108,9 +106,8 @@ class GitlabClient {
     );
   }
 
-  /// GitLab manda las cabeceras de paginación vacías (no ausentes) cuando no
-  /// hay siguiente página, así que un parse directo devolvería null igualmente,
-  /// pero conviene ser explícito.
+  /// GitLab manda vacías (no ausentes) las cabeceras de paginación en la
+  /// última página: se tratan explícitamente como null.
   static int? _intHeader(Response<dynamic> response, String name) {
     final value = response.headers.value(name);
     if (value == null || value.isEmpty) return null;

@@ -37,11 +37,8 @@ class PendingItem {
   final DateTime? at;
 }
 
-/// Normaliza una URL de GitLab para poder compararla entre fuentes.
-///
-/// Los todos apuntan al ancla del comentario
-/// (`…/merge_requests/12#note_99`) mientras que el MR expone la URL limpia.
-/// Sin recortar el fragmento, el mismo MR contaría dos veces.
+/// Quita ancla y query: los todos apuntan a `…/merge_requests/12#note_99` y
+/// el MR a la URL limpia; sin esto, el mismo MR contaría dos veces.
 String? normalizeGitlabUrl(String? url) {
   if (url == null || url.isEmpty) return null;
   var normalized = url.split('#').first.split('?').first;
@@ -51,14 +48,8 @@ String? normalizeGitlabUrl(String? url) {
   return normalized.isEmpty ? null : normalized;
 }
 
-/// Funde las tres fuentes en la lista que alimenta la campana.
-///
-/// Un mismo MR llega a la vez como todo de tipo `approval_required` y en
-/// `reviews_for_me`; sin deduplicar, el contador mentiría. Cuando algo aparece
-/// por varias vías gana el todo, porque es el único que explica el motivo.
-///
-/// Deliberadamente NO recibe los MRs propios: esos son trabajo en curso, no
-/// algo que bloquee al usuario, y van al resumen por separado.
+/// Funde todos, revisiones y asignados sin repetir MRs; gana el todo, que
+/// dice el motivo. Los MRs propios no entran: son trabajo en curso.
 List<PendingItem> mergePendingWork({
   required List<TodoItem> todos,
   required List<MergeRequestSummary> reviewing,

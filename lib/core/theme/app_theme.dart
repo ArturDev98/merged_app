@@ -5,6 +5,10 @@ import 'package:flutter/services.dart';
 /// Teal de la marca: el mismo del icono y del splash.
 const brandTeal = Color(0xFF00695C);
 
+/// Fuente para código, SHAs y detalles técnicos. Va incluida en la app: la
+/// "monospace" del sistema no existe en web y en Android depende del fabricante.
+const monoFontFamily = 'JetBrainsMono';
+
 // Superficie oscura: la misma que el splash en modo oscuro (values-night/colors.xml).
 const _darkSurface = Color(0xFF0E1917);
 
@@ -22,10 +26,8 @@ class Tone {
   );
 }
 
-/// Colores de Merged que el ColorScheme de Material no modela.
-///
-/// Los tonos van por color, no por significado: qué color toca a cada cosa se
-/// decide en las etiquetas (`activity_labels`, `merge_request_labels`).
+/// Colores propios que el ColorScheme no modela. Los tonos van por color;
+/// qué color toca a cada cosa se decide en las etiquetas.
 @immutable
 class MergedColors extends ThemeExtension<MergedColors> {
   const MergedColors({
@@ -229,10 +231,12 @@ ThemeData buildTheme(Brightness brightness) {
   );
 }
 
-/// La licencia OFL de Outfit exige acompañar a la fuente allí donde se reparta.
+/// La licencia OFL exige acompañar a cada fuente allí donde se reparta.
 void registerFontLicense() {
   LicenseRegistry.addLicense(() async* {
-    final text = await rootBundle.loadString('assets/fonts/OFL.txt');
-    yield LicenseEntryWithLineBreaks(const ['Outfit'], text);
+    for (final font in ['Outfit', 'JetBrainsMono']) {
+      final text = await rootBundle.loadString('assets/fonts/OFL-$font.txt');
+      yield LicenseEntryWithLineBreaks([font], text);
+    }
   });
 }

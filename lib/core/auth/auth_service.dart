@@ -3,10 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'auth_failure.dart';
 
-/// Servicio de autenticación contra GitLab usando OAuth2 + PKCE.
-/// No usa Client Secret: la app es pública (no confidencial), por lo que
-/// PKCE garantiza la seguridad del intercambio del authorization code
-/// sin necesidad de un backend intermediario.
+/// OAuth2 + PKCE contra GitLab, sin client secret: la app es un cliente
+/// público y PKCE protege el intercambio del código sin backend.
 class AuthService {
   AuthService._internal();
   static final AuthService instance = AuthService._internal();
@@ -91,9 +89,8 @@ class AuthService {
     return refreshAccessToken();
   }
 
-  /// Fuerza un refresh sin mirar la expiración local. La usa el interceptor
-  /// HTTP ante un 401: el token puede seguir vigente en el reloj y haber sido
-  /// revocado en el servidor.
+  /// Refresh forzado, sin mirar la expiración local: ante un 401 el token
+  /// puede estar vigente en el reloj y revocado en el servidor.
   Future<String?> refreshAccessToken() async {
     final refreshToken = await _storage.read(key: _keyRefreshToken);
     if (refreshToken == null) return null;

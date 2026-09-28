@@ -5,16 +5,15 @@ import '../../core/models/merge_request_detail.dart';
 import '../../core/models/merge_request_summary.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/diff_view.dart';
 import '../../shared/merge_request_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../../shared/tone_icon.dart';
 
-/// Detalle de un merge request.
-///
-/// Es el único sitio donde se puede mostrar el pipeline: la lista de la API no
-/// devuelve `head_pipeline`.
+/// Detalle de un merge request. Único sitio con el pipeline: la lista de la
+/// API no trae `head_pipeline`.
 class MergeRequestDetailScreen extends ConsumerWidget {
   const MergeRequestDetailScreen({super.key, required this.mr});
 
@@ -195,7 +194,74 @@ class _DetailBody extends StatelessWidget {
             child: Text(description, style: theme.textTheme.bodyMedium),
           ),
         ],
+        _Changes(detail: detail),
       ],
     );
+  }
+}
+
+// Lo que la API sirve en una página; con más, un móvil ya no es el sitio.
+const _maxFilesInApp = 30;
+
+class _Changes extends ConsumerWidget {
+  const _Changes({required this.detail});
+
+  final MergeRequestDetail detail;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = detail.changedFiles;
+    final mr = detail.summary;
+    final diffsUrl = mr.webUrl == null ? null : '${mr.webUrl}/diffs';
+    // Sin dato (MR recién creado, GitLab aún calcula) o sin cambios: nada.
+    if (count == null || count == 0) return const SizedBox.shrink();
+
+    if (count > _maxFilesInApp) {
+      final theme = Theme.of(context);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Archivos cambiados · ${detail.changesCount}',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Son demasiados para revisarlos aquí.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () => openInGitlab(context, diffsUrl),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('Ver los cambios en GitLab'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final key = (projectId: mr.projectId, iid: mr.iid);
+    return ref
+        .watch(mergeRequestDiffsProvider(key))
+        .when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(28),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => ErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(mergeRequestDiffsProvider(key)),
+          ),
+          data: (page) => FileDiffList(
+            files: page.items,
+            webUrl: diffsUrl,
+            incomplete: page.hasMore,
+          ),
+        );
   }
 }

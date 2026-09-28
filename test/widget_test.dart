@@ -1,9 +1,5 @@
-// Smoke test de arranque: verifica que la app levanta y, sin sesión guardada,
-// aterriza en el login.
-//
-// AuthService toca flutter_secure_storage, que en un test de widget no tiene
-// implementación nativa detrás. Interceptamos su MethodChannel y respondemos
-// null a todo, que es exactamente el caso "no hay nada guardado".
+// Sin sesión guardada, la app arranca en el login. El canal de
+// flutter_secure_storage responde null a todo: "no hay nada guardado".
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

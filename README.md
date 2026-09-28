@@ -18,12 +18,13 @@ tus ramas y lo que te está esperando.
 ## Qué hace
 
 - **Resumen de los últimos 30 días:** commits, pushes y días con actividad.
-- **Actividad** agrupada por día. Al tocar un push se ven sus commits reales.
+- **Actividad** agrupada por día. Al tocar un push se ven sus commits reales
+  y los archivos que cambió, con su diff.
 - **Campana de pendientes:** aprobaciones requeridas, menciones, merge requests
   que te toca revisar o que tienes asignados. Si un mismo MR llega por varias
   vías, cuenta una sola vez.
 - **Merge requests** propios, asignados y a revisar, filtrables por estado, con
-  el pipeline y el diagnóstico de fusión en el detalle.
+  el pipeline, el diagnóstico de fusión y los archivos cambiados en el detalle.
 - **Ramas creadas** y **proyectos** de los que eres miembro.
 - **Sin conexión**, muestra lo último que cargó y avisa de desde cuándo.
 - Tema claro y oscuro. Todo lo que la app no hace se abre en GitLab.
@@ -67,8 +68,9 @@ y pon su *Application ID* en `_clientId`, en
 
 > [!NOTE]
 > `android/app/src/main/AndroidManifest.xml` se aparta del template de Flutter
-> en dos puntos que el login necesita. Están explicados en el propio archivo:
-> no los pierdas al regenerar la carpeta `android/`.
+> en dos puntos que el login necesita. Están explicados en
+> [PLAN.md](PLAN.md#cuidado-al-actualizar-el-template-de-flutter): no los
+> pierdas al regenerar la carpeta `android/`.
 
 ## Desarrollo
 

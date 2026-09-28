@@ -5,15 +5,14 @@ import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/activity_labels.dart';
-import '../../shared/open_in_gitlab.dart';
+import '../../shared/diff_view.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../../shared/tone_icon.dart';
+import 'commit_detail_screen.dart';
 
-/// Detalle de un push, con sus commits reales.
-///
-/// Los eventos solo traen el título del último commit; la lista completa se
-/// pide aquí con `compare`, una sola llamada y solo al abrir.
+/// Detalle de un push: sus commits y archivos, pedidos con `compare` al
+/// abrir (los eventos solo traen el título del último commit).
 class PushDetailScreen extends ConsumerWidget {
   const PushDetailScreen({
     super.key,
@@ -29,12 +28,10 @@ class PushDetailScreen extends ConsumerWidget {
     final push = event.pushData;
     final theme = Theme.of(context);
 
-    // En una creación de rama GitLab no manda commit_from: antes de ese push no
-    // existía nada con lo que comparar. Se usa la rama por defecto del proyecto
-    // como base, que da justo los commits que la rama introduce.
-    final defaultBranch = ref
-        .watch(projectsByIdProvider)[event.projectId]
-        ?.defaultBranch;
+    // Al crear una rama GitLab no manda commit_from: se compara con la rama
+    // por defecto, que da justo los commits que la rama introduce.
+    final project = ref.watch(projectsByIdProvider)[event.projectId];
+    final defaultBranch = project?.defaultBranch;
     final base = push?.commitFrom ?? defaultBranch;
     final canExpand = push != null && push.hasTarget && base != null;
 
@@ -96,12 +93,16 @@ class PushDetailScreen extends ConsumerWidget {
               message: _whyNoDetail(push, defaultBranch),
             )
           else
-            _CommitList(
+            _PushChanges(
               push: (
                 projectId: event.projectId,
                 from: base,
                 to: push.commitTo!,
               ),
+              projectName: projectName,
+              compareUrl: project?.webUrl == null
+                  ? null
+                  : '${project!.webUrl}/-/compare/$base...${push.commitTo}',
             ),
         ],
       ),
@@ -122,26 +123,33 @@ class PushDetailScreen extends ConsumerWidget {
   }
 }
 
-class _CommitList extends ConsumerWidget {
-  const _CommitList({required this.push});
+class _PushChanges extends ConsumerWidget {
+  const _PushChanges({
+    required this.push,
+    required this.projectName,
+    required this.compareUrl,
+  });
 
   final PushRef push;
+  final String projectName;
+  final String? compareUrl;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final commits = ref.watch(pushCommitsProvider(push));
+    final changes = ref.watch(pushChangesProvider(push));
+    final theme = Theme.of(context);
 
-    return commits.when(
+    return changes.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(32),
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => ErrorView(
         error: error,
-        onRetry: () => ref.invalidate(pushCommitsProvider(push)),
+        onRetry: () => ref.invalidate(pushChangesProvider(push)),
       ),
-      data: (list) {
-        if (list.isEmpty) {
+      data: (comparison) {
+        if (comparison.commits.isEmpty && comparison.files.isEmpty) {
           return const EmptyView(
             icon: Icons.commit_outlined,
             title: 'Sin commits nuevos',
@@ -149,8 +157,24 @@ class _CommitList extends ConsumerWidget {
           );
         }
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final commit in list)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Row(
+                children: [
+                  Text('Commits', style: theme.textTheme.titleSmall),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${comparison.commits.length}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (final commit in comparison.commits)
               ListTile(
                 leading: ToneIcon(
                   icon: Icons.commit,
@@ -166,7 +190,7 @@ class _CommitList extends ConsumerWidget {
                     children: [
                       TextSpan(
                         text: commit.shortId,
-                        style: const TextStyle(fontFamily: 'monospace'),
+                        style: const TextStyle(fontFamily: monoFontFamily),
                       ),
                       TextSpan(
                         text:
@@ -176,10 +200,27 @@ class _CommitList extends ConsumerWidget {
                     ],
                   ),
                 ),
-                onTap: commit.webUrl == null
-                    ? null
-                    : () => openInGitlab(context, commit.webUrl),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.outline,
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CommitDetailScreen(
+                      projectId: push.projectId,
+                      commit: commit,
+                      projectName: projectName,
+                    ),
+                  ),
+                ),
               ),
+            if (comparison.files.isNotEmpty)
+              FileDiffList(
+                files: comparison.files,
+                webUrl: compareUrl,
+                incomplete: comparison.truncated,
+              ),
+            const SizedBox(height: 32),
           ],
         );
       },

@@ -101,10 +101,8 @@ Tone mrStateTone(MergeRequestSummary mr, MergedColors colors) =>
       _ => colors.neutral,
     };
 
-/// Traduce el diagnóstico de fusión de GitLab.
-///
-/// Solo se traducen los casos que explican algo accionable; el resto se omite
-/// en vez de mostrar una cadena interna como "checking".
+/// Diagnóstico de fusión traducido. Solo los casos accionables; el resto
+/// ("checking"…) se omite en vez de enseñar la cadena interna.
 String? mergeStatusLabel(String? detailedMergeStatus) =>
     switch (detailedMergeStatus) {
       'mergeable' => 'Listo para fusionar',

@@ -9,10 +9,8 @@ import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
 import '../../shared/tone_icon.dart';
 
-/// Ramas creadas por el usuario en la ventana reciente.
-///
-/// No usa ningún endpoint propio: sale de los mismos eventos que alimentan los
-/// contadores del resumen, filtrando los pushes que crean una rama.
+/// Ramas creadas en la ventana reciente. Sin endpoint propio: salen de los
+/// mismos eventos que los contadores del resumen.
 class BranchesScreen extends ConsumerWidget {
   const BranchesScreen({super.key});
 
@@ -81,9 +79,8 @@ class _BranchTile extends ConsumerWidget {
     final projectName = project?.name ?? 'Proyecto ${event.projectId}';
     final push = event.pushData!;
 
-    // Los eventos no traen la URL de la rama; se compone con la del proyecto.
-    // El nombre se codifica porque las ramas suelen llevar barras
-    // (fix/login-biometrico) y romperían la ruta.
+    // Los eventos no traen la URL de la rama: se compone con la del
+    // proyecto, codificando el nombre porque sus barras romperían la ruta.
     final url = project?.webUrl != null
         ? '${project!.webUrl}/-/tree/${Uri.encodeComponent(push.ref)}'
         : null;

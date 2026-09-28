@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icono de Merged: dos ramas que confluyen en una.
-     Se dibuja como vector en lugar de exportar PNG por densidad: así el icono
-     vive en el repositorio como texto, se versiona en el diff y no hace falta
-     regenerar cinco tamaños al tocarlo. -->
+<!-- Icono de Merged, en vector y no en PNG por densidad: se versiona como
+     texto y no hay que regenerar cinco tamaños al tocarlo. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"

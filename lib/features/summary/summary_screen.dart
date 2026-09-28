@@ -529,10 +529,8 @@ class _ShortcutTile extends StatelessWidget {
   }
 }
 
-/// Campana con contador.
-///
-/// Responde a "¿me están esperando?". **El cero se muestra**: ocultarlo dejaría
-/// sin saber si no hay nada pendiente o si aún no ha cargado.
+/// Campana: ¿me están esperando? El cero se muestra; ocultarlo no
+/// distinguiría "nada pendiente" de "aún no ha cargado".
 class _PendingBell extends ConsumerWidget {
   const _PendingBell();
 
@@ -580,10 +578,8 @@ class _PendingBell extends ConsumerWidget {
   }
 }
 
-/// Avisa de que lo que se ve viene de disco y no de GitLab.
-///
-/// Sin este aviso, unos datos guardados de hace horas son indistinguibles de
-/// datos recién traídos, que es la peor forma de fallar sin conexión.
+/// Avisa de que los datos vienen de disco: sin esto, unos de hace horas no
+/// se distinguen de los recién traídos.
 class _OfflineBanner extends ConsumerWidget {
   const _OfflineBanner();
 

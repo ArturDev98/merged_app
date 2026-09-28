@@ -119,10 +119,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// Presenta un fallo de login sin volcar la excepción encima del usuario.
-///
-/// Cancelar se muestra en tono neutro y no en rojo: cerrar el navegador es una
-/// decisión del usuario, no un error de la app.
+/// Fallo de login sin volcar la excepción. Cancelar va en tono neutro:
+/// cerrar el navegador es decisión del usuario, no un error.
 class _FailureCard extends StatelessWidget {
   const _FailureCard({required this.failure});
 
@@ -185,7 +183,7 @@ class _FailureCard extends StatelessWidget {
                     child: SelectableText(
                       failure.detail!,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        fontFamily: 'monospace',
+                        fontFamily: monoFontFamily,
                         color: scheme.outline,
                       ),
                     ),

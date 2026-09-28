@@ -9,7 +9,7 @@ import 'models/gitlab_user.dart';
 import 'models/merge_request_detail.dart';
 import 'models/merge_request_summary.dart';
 import 'models/activity_event.dart';
-import 'models/repo_commit.dart';
+import 'models/file_diff.dart';
 
 final authServiceProvider = Provider<AuthService>(
   (ref) => AuthService.instance,
@@ -33,10 +33,8 @@ final projectsProvider = FutureProvider<List<GitlabProject>>(
   (ref) => ref.watch(gitlabRepositoryProvider).memberProjects(),
 );
 
-/// Índice de proyectos por id.
-///
-/// Los eventos solo traen `project_id`, así que sin este mapa el feed no puede
-/// decir a qué proyecto pertenece cada push.
+/// Índice de proyectos por id: los eventos solo traen `project_id` y sin
+/// esto el feed no sabe a qué proyecto pertenece cada push.
 final projectsByIdProvider = Provider<Map<int, GitlabProject>>((ref) {
   final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
   return {for (final project in projects) project.id: project};
@@ -89,20 +87,15 @@ class ActivitySummary {
   final int activeDays;
 }
 
-/// Eventos de la ventana reciente, en crudo.
-///
-/// Lo consumen los contadores del resumen y la pantalla de ramas. Al ser un
-/// único provider, ambas superficies comparten la misma descarga en lugar de
-/// pedir los mismos eventos dos veces.
+/// Eventos de la ventana reciente. Uno solo para resumen y ramas: comparten
+/// la descarga en vez de pedir lo mismo dos veces.
 final recentEventsProvider = FutureProvider<List<ActivityEvent>>((ref) {
   final since = DateTime.now().subtract(activityWindow);
   return ref.watch(gitlabRepositoryProvider).eventsSince(since);
 });
 
-/// Ramas creadas en la ventana, deducidas de los propios eventos.
-///
-/// No hay llamada extra: una rama nueva es un push con `action == created` y
-/// `ref_type == branch`.
+/// Ramas creadas, sin llamada extra: una rama nueva es un push con
+/// `action == created` y `ref_type == branch`.
 final createdBranchesProvider = FutureProvider<List<ActivityEvent>>((
   ref,
 ) async {
@@ -212,11 +205,20 @@ final activityFeedProvider =
 /// family de Riverpod cachea bien sin escribir == ni hashCode.
 typedef PushRef = ({int projectId, String from, String to});
 
-/// Commits reales de un push, vía compare. Solo se pide al abrir el detalle.
-final pushCommitsProvider = FutureProvider.family<List<RepoCommit>, PushRef>(
+/// Commits y archivos de un push, vía compare. Solo se pide al abrir el detalle.
+final pushChangesProvider = FutureProvider.family<Comparison, PushRef>(
   (ref, push) => ref
       .watch(gitlabRepositoryProvider)
-      .commitsForPush(projectId: push.projectId, from: push.from, to: push.to),
+      .compare(projectId: push.projectId, from: push.from, to: push.to),
+);
+
+/// Identifica un commit dentro de su proyecto.
+typedef CommitRef = ({int projectId, String sha});
+
+final commitDiffProvider = FutureProvider.family<Page<FileDiff>, CommitRef>(
+  (ref, commit) => ref
+      .watch(gitlabRepositoryProvider)
+      .commitDiff(projectId: commit.projectId, sha: commit.sha),
 );
 
 /// Consulta de una lista de merge requests. Record: igualdad estructural, así
@@ -309,12 +311,16 @@ final mergeRequestDetailProvider =
           .mergeRequestDetail(projectId: mr.projectId, iid: mr.iid),
     );
 
-/// Verdadero en cuanto alguna consulta falla por sesión revocada.
-///
-/// El interceptor ya borra los tokens ante un 401 irrecuperable, pero eso solo
-/// no devuelve al usuario al login: la pantalla se queda con un error del que
-/// no puede salir. Este provider observa las superficies principales y avisa al
-/// gate para que recalcule la sesión.
+/// Primera página de archivos cambiados de un MR. Solo se pide si son pocos:
+/// con muchos, el detalle manda a GitLab en vez de descargarlos.
+final mergeRequestDiffsProvider = FutureProvider.family<Page<FileDiff>, MrRef>(
+  (ref, mr) => ref
+      .watch(gitlabRepositoryProvider)
+      .mergeRequestDiffs(projectId: mr.projectId, iid: mr.iid),
+);
+
+/// True si una consulta falla por sesión revocada. El interceptor borra los
+/// tokens, pero sin esto el gate no volvería al login.
 final sessionExpiredProvider = Provider<bool>((ref) {
   bool expired(AsyncValue<Object?> value) =>
       value.hasError && value.error is SessionExpiredException;

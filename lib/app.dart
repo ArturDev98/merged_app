@@ -29,10 +29,8 @@ class MergedApp extends ConsumerWidget {
   }
 }
 
-/// Decide entre login y home según haya sesión utilizable.
-///
-/// Invalidar `sessionProvider` es lo que hace conmutar la pantalla, tanto al
-/// entrar como al cerrar sesión.
+/// Login o home según haya sesión; invalidar `sessionProvider` conmuta la
+/// pantalla, al entrar y al cerrar sesión.
 class _AuthGate extends ConsumerWidget {
   const _AuthGate();
 
@@ -40,9 +38,8 @@ class _AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
 
-    // Si cualquier pantalla topa con una sesión revocada, el gate devuelve al
-    // login solo. Antes el usuario se quedaba mirando un error sin salida:
-    // AuthService ya había borrado los tokens, pero nadie recalculaba la sesión.
+    // Una consulta con la sesión revocada devuelve al login: AuthService borra
+    // los tokens, pero sin esto nadie recalcula la sesión.
     ref.listen(sessionExpiredProvider, (previous, next) {
       if (next) ref.invalidate(sessionProvider);
     });
