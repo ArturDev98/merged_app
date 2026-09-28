@@ -38,13 +38,15 @@ class _AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
 
-    // Una consulta con la sesión revocada devuelve al login: AuthService borra
-    // los tokens, pero sin esto nadie recalcula la sesión.
-    ref.listen(sessionExpiredProvider, (previous, next) {
-      if (next) ref.invalidate(sessionProvider);
-    });
+    // Una consulta con la sesión revocada devuelve al login. Solo con sesión:
+    // vigilarlo en el login lanzaba peticiones sin token que quedaban en error.
+    if (session.valueOrNull ?? false) {
+      ref.listen(sessionExpiredProvider, (previous, next) {
+        if (next) ref.invalidate(sessionProvider);
+      });
+    }
 
-    return session.when(
+    return session.view(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(

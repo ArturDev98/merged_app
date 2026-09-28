@@ -34,7 +34,7 @@ class BranchesScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: branches.when(
+      body: branches.view(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: ErrorView(

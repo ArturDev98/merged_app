@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 const brandTeal = Color(0xFF00695C);
 
 /// Fuente para código, SHAs y detalles técnicos. Va incluida en la app: la
-/// "monospace" del sistema no existe en web y en Android depende del fabricante.
+/// "monospace" del sistema no existe en web y en Android varía por marca.
 const monoFontFamily = 'JetBrainsMono';
 
-// Superficie oscura: la misma que el splash en modo oscuro (values-night/colors.xml).
+// La misma que el splash oscuro (values-night/colors.xml).
 const _darkSurface = Color(0xFF0E1917);
 
 /// Fondo y primer plano de una categoría: tipo de evento, estado, etc.

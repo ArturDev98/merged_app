@@ -139,7 +139,7 @@ class _PushChanges extends ConsumerWidget {
     final changes = ref.watch(pushChangesProvider(push));
     final theme = Theme.of(context);
 
-    return changes.when(
+    return changes.view(
       loading: () => const Padding(
         padding: EdgeInsets.all(32),
         child: Center(child: CircularProgressIndicator()),

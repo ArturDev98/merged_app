@@ -25,11 +25,13 @@ tus ramas y lo que te está esperando.
   vías, cuenta una sola vez.
 - **Merge requests** propios, asignados y a revisar, filtrables por estado, con
   el pipeline, el diagnóstico de fusión y los archivos cambiados en el detalle.
+- **Aprobar merge requests**, o quitar tu aprobación, con confirmación.
 - **Ramas creadas** y **proyectos** de los que eres miembro.
 - **Sin conexión**, muestra lo último que cargó y avisa de desde cuándo.
 - Tema claro y oscuro. Todo lo que la app no hace se abre en GitLab.
 
-Es de **solo lectura**: pide los permisos `read_api` y `read_user` y nada más.
+Pide el permiso `api` de GitLab, que da lectura y escritura. Solo escribe al
+aprobar o quitar tu aprobación de un merge request, y siempre tras confirmarlo.
 
 ## Estado
 
@@ -61,7 +63,7 @@ corresponde a una app móvil. Para usar una tuya, regístrala en la sección
 
 - **Redirect URI:** `dev.merged.app://callback`
 - **Confidencial:** desmarcado
-- **Scopes:** `read_api` y `read_user`
+- **Scopes:** `api`
 
 y pon su *Application ID* en `_clientId`, en
 [`lib/core/auth/auth_service.dart`](lib/core/auth/auth_service.dart).

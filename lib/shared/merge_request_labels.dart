@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../core/models/merge_request_summary.dart';
@@ -126,3 +127,34 @@ Tone mergeStatusTone(String? detailedMergeStatus, MergedColors colors) =>
       'ci_must_pass' => colors.red,
       _ => colors.amber,
     };
+
+/// Qué decir cuando aprobar o quitar la aprobación falla, según lo que
+/// responde GitLab.
+String approvalErrorMessage(Object error, {required bool approving}) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map && data['error'] == 'insufficient_scope') {
+      return 'Tu sesión no tiene permiso para aprobar. Cierra sesión y vuelve '
+          'a entrar.';
+    }
+    switch (error.response?.statusCode) {
+      case 409:
+        return 'El merge request cambió mientras lo mirabas. Recárgalo antes '
+            'de aprobar.';
+      case 401:
+        return approving
+            ? 'GitLab no te deja aprobarlo: puede que ya lo hayas aprobado.'
+            : 'GitLab no te deja quitar la aprobación.';
+      case 403:
+        return 'Tu cuenta no tiene permiso para esto en este proyecto.';
+      case 404:
+        return approving
+            ? 'No se encontró el merge request.'
+            : 'No había una aprobación tuya que quitar.';
+    }
+    if (error.type != DioExceptionType.badResponse) {
+      return 'Sin conexión con GitLab. Inténtalo de nuevo.';
+    }
+  }
+  return 'No se pudo completar. Inténtalo de nuevo.';
+}

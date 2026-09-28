@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:merged_app/core/models/merge_request_summary.dart';
 import 'package:merged_app/shared/merge_request_labels.dart';
@@ -54,6 +55,53 @@ void main() {
       // "checking" es ruido interno: mejor no mostrar nada.
       expect(mergeStatusLabel('checking'), isNull);
       expect(mergeStatusLabel(null), isNull);
+    });
+  });
+
+  group('approvalErrorMessage', () {
+    DioException fail(int status, [Object? data]) => DioException(
+      requestOptions: RequestOptions(path: '/approve'),
+      type: DioExceptionType.badResponse,
+      response: Response(
+        requestOptions: RequestOptions(path: '/approve'),
+        statusCode: status,
+        data: data,
+      ),
+    );
+
+    test('un 409 avisa de que el MR cambió, no de un fallo genérico', () {
+      expect(
+        approvalErrorMessage(fail(409), approving: true),
+        contains('cambió mientras lo mirabas'),
+      );
+    });
+
+    test('un 401 al aprobar no se presenta como sesión caducada', () {
+      expect(
+        approvalErrorMessage(fail(401), approving: true),
+        contains('ya lo hayas aprobado'),
+      );
+    });
+
+    test('sin el scope api pide volver a iniciar sesión', () {
+      expect(
+        approvalErrorMessage(
+          fail(403, {'error': 'insufficient_scope'}),
+          approving: true,
+        ),
+        contains('vuelve a entrar'),
+      );
+    });
+
+    test('sin red lo dice', () {
+      final offline = DioException(
+        requestOptions: RequestOptions(path: '/approve'),
+        type: DioExceptionType.connectionError,
+      );
+      expect(
+        approvalErrorMessage(offline, approving: false),
+        contains('Sin conexión'),
+      );
     });
   });
 }

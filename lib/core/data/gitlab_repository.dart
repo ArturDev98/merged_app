@@ -5,10 +5,11 @@ import '../models/merge_request_detail.dart';
 import '../models/merge_request_summary.dart';
 import '../models/activity_event.dart';
 import '../models/file_diff.dart';
+import '../models/merge_request_approvals.dart';
 import '../models/todo_item.dart';
 import 'response_cache.dart';
 
-/// Acceso de lectura a GitLab. Traduce endpoints a modelos; no sabe nada de UI.
+/// Acceso a la API de GitLab. Traduce endpoints a modelos; no sabe nada de UI.
 class GitlabRepository {
   GitlabRepository({GitlabClient? client, ResponseCache? cache})
     : _client = client ?? GitlabClient.instance,
@@ -192,6 +193,32 @@ class GitlabRepository {
     '/projects/$projectId/merge_requests/$iid',
     parse: MergeRequestDetail.fromJson,
   );
+
+  Future<MergeRequestApprovals> approvals({
+    required int projectId,
+    required int iid,
+  }) => _client.getOne(
+    '/projects/$projectId/merge_requests/$iid/approvals',
+    parse: MergeRequestApprovals.fromJson,
+  );
+
+  /// Aprueba la versión vista: si alguien subió cambios entretanto, el `sha` ya
+  /// no coincide y GitLab responde 409 en vez de aprobar algo sin revisar.
+  Future<MergeRequestApprovals> approve({
+    required int projectId,
+    required int iid,
+    String? sha,
+  }) => _client.post(
+    '/projects/$projectId/merge_requests/$iid/approve',
+    data: {'sha': ?sha},
+    parse: MergeRequestApprovals.fromJson,
+  );
+
+  Future<void> unapprove({required int projectId, required int iid}) =>
+      _client.post(
+        '/projects/$projectId/merge_requests/$iid/unapprove',
+        parse: (_) {},
+      );
 
   /// Pendientes. Solo acepta `pending` o `done`; `all` devuelve 400.
   Future<List<TodoItem>> pendingTodos({int perPage = 100}) async {

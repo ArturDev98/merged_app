@@ -7,6 +7,7 @@ import 'data/open_merge_requests.dart';
 import 'data/pending_work.dart';
 import 'models/gitlab_project.dart';
 import 'models/gitlab_user.dart';
+import 'models/merge_request_approvals.dart';
 import 'models/merge_request_detail.dart';
 import 'models/merge_request_summary.dart';
 import 'models/activity_event.dart';
@@ -16,9 +17,12 @@ final authServiceProvider = Provider<AuthService>(
   (ref) => AuthService.instance,
 );
 
-final gitlabRepositoryProvider = Provider<GitlabRepository>(
-  (ref) => GitlabRepository(),
-);
+/// Se rehace al entrar o salir: nada cargado (o fallado) con una sesión pasa a
+/// la siguiente, porque todo lo que depende de él se vuelve a pedir.
+final gitlabRepositoryProvider = Provider<GitlabRepository>((ref) {
+  ref.watch(sessionProvider.select((session) => session.valueOrNull));
+  return GitlabRepository();
+});
 
 /// Si hay sesión utilizable. Refrescar este provider es lo que hace que la app
 /// pase de login a home y viceversa.
@@ -176,7 +180,10 @@ class ActivityFeedState {
 /// Feed de actividad con scroll infinito.
 class ActivityFeed extends AsyncNotifier<ActivityFeedState> {
   @override
-  Future<ActivityFeedState> build() => _fetch(1);
+  Future<ActivityFeedState> build() {
+    ref.watch(gitlabRepositoryProvider);
+    return _fetch(1);
+  }
 
   Future<ActivityFeedState> _fetch(int page) async {
     final result = await ref.read(gitlabRepositoryProvider).events(page: page);
@@ -218,7 +225,7 @@ final activityFeedProvider =
 /// family de Riverpod cachea bien sin escribir == ni hashCode.
 typedef PushRef = ({int projectId, String from, String to});
 
-/// Commits y archivos de un push, vía compare. Solo se pide al abrir el detalle.
+/// Commits y archivos de un push, vía compare. Solo al abrir el detalle.
 final pushChangesProvider = FutureProvider.family<Comparison, PushRef>(
   (ref, push) => ref
       .watch(gitlabRepositoryProvider)
@@ -265,7 +272,10 @@ class MergeRequestListState {
 class MergeRequestList
     extends FamilyAsyncNotifier<MergeRequestListState, MrQuery> {
   @override
-  Future<MergeRequestListState> build(MrQuery arg) => _fetch(1);
+  Future<MergeRequestListState> build(MrQuery arg) {
+    ref.watch(gitlabRepositoryProvider);
+    return _fetch(1);
+  }
 
   Future<MergeRequestListState> _fetch(int page) async {
     final result = await ref
@@ -324,6 +334,13 @@ final mergeRequestDetailProvider =
           .mergeRequestDetail(projectId: mr.projectId, iid: mr.iid),
     );
 
+final mergeRequestApprovalsProvider =
+    FutureProvider.family<MergeRequestApprovals, MrRef>(
+      (ref, mr) => ref
+          .watch(gitlabRepositoryProvider)
+          .approvals(projectId: mr.projectId, iid: mr.iid),
+    );
+
 /// Primera página de archivos cambiados de un MR. Solo se pide si son pocos:
 /// con muchos, el detalle manda a GitLab en vez de descargarlos.
 final mergeRequestDiffsProvider = FutureProvider.family<Page<FileDiff>, MrRef>(
@@ -336,7 +353,7 @@ final mergeRequestDiffsProvider = FutureProvider.family<Page<FileDiff>, MrRef>(
 /// tokens, pero sin esto el gate no volvería al login.
 final sessionExpiredProvider = Provider<bool>((ref) {
   bool expired(AsyncValue<Object?> value) =>
-      value.hasError && value.error is SessionExpiredException;
+      value.hasError && isSessionExpired(value.error);
 
   return expired(ref.watch(currentUserProvider)) ||
       expired(ref.watch(activityFeedProvider)) ||

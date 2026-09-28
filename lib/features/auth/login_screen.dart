@@ -102,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                     const SizedBox(height: 32),
                     Text(
-                      'Solo lectura · se conecta directamente con gitlab.com',
+                      'Se conecta directamente con gitlab.com, sin servidores intermedios',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onHeaderMuted,

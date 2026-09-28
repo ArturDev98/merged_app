@@ -19,7 +19,7 @@ class ProjectsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Proyectos')),
-      body: projects.when(
+      body: projects.view(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: ErrorView(

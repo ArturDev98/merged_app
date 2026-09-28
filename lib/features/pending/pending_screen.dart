@@ -43,7 +43,7 @@ class PendingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: pending.when(
+      body: pending.view(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: ErrorView(error: error, onRetry: reload),
@@ -86,7 +86,6 @@ class _PendingTile extends StatelessWidget {
       ),
       title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text('${item.reason} · ${relativeTime(item.at)}'),
-      // Solo lectura: la acción real ocurre en GitLab.
       trailing: Icon(
         Icons.open_in_new,
         size: 18,

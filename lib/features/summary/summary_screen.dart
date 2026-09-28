@@ -31,7 +31,7 @@ class SummaryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(activityFeedProvider);
 
-    // La cabecera es teal en los dos temas: iconos de la barra de estado claros.
+    // Cabecera teal en los dos temas: iconos de la barra de estado claros.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -244,7 +244,7 @@ class _Profile extends ConsumerWidget {
 
     // valueOrNull es null tanto cargando como al fallar: sin mirar el estado,
     // el encabezado se quedaba en "Cargando…" para siempre.
-    final failed = async.hasError && !async.hasValue;
+    final failed = async.hasError && !async.hasValue && !async.isLoading;
     final name =
         user?.name ?? (failed ? 'No se pudo cargar tu perfil' : 'Cargando…');
 
@@ -902,7 +902,7 @@ class _ProfileSheet extends ConsumerWidget {
               ),
               onTap: () async {
                 // Se cierra la hoja antes: si no, quedaría encima del login.
-                // Y se capturan antes de cerrar, porque cerrar desmonta este ref.
+                // Y se capturan antes, porque cerrar desmonta este ref.
                 final auth = ref.read(authServiceProvider);
                 final container = ProviderScope.containerOf(
                   context,
@@ -910,6 +910,8 @@ class _ProfileSheet extends ConsumerWidget {
                 );
                 Navigator.of(context).pop();
                 await auth.logout();
+                // La caché sin conexión es de esta cuenta: no se deja.
+                await container.read(gitlabRepositoryProvider).cache.clear();
                 container.invalidate(sessionProvider);
               },
             ),

@@ -5,7 +5,7 @@ import '../core/theme/app_theme.dart';
 import 'open_in_gitlab.dart';
 import 'tone_icon.dart';
 
-// Por encima de esto un diff no se lee en un móvil: se corta y se ofrece GitLab.
+// Más que esto no se lee en un móvil: se corta y se ofrece GitLab.
 const _maxLinesPerFile = 400;
 
 const _mono = TextStyle(

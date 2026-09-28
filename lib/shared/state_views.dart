@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/gitlab_client.dart';
 import '../core/theme/app_theme.dart';
@@ -19,7 +20,7 @@ class ErrorDescription {
   /// Traduce los fallos reales de la app: sin esto, quedarse sin cobertura
   /// y un 500 de GitLab se veían igual, como un volcado de `DioException`.
   factory ErrorDescription.from(Object error) {
-    if (error is SessionExpiredException) {
+    if (isSessionExpired(error)) {
       return const ErrorDescription(
         icon: Icons.lock_clock_outlined,
         title: 'Tu sesión expiró',
@@ -205,4 +206,19 @@ class _StateIcon extends StatelessWidget {
       child: Icon(icon, size: 34, color: scheme.onSurfaceVariant),
     );
   }
+}
+
+extension RetryAwareView<T> on AsyncValue<T> {
+  /// Como `when`, pero al reintentar tras un error se ve el cargando en vez del
+  /// error quieto. Refrescar con datos los mantiene a la vista.
+  R view<R>({
+    required R Function() loading,
+    required R Function(Object error, StackTrace stackTrace) error,
+    required R Function(T data) data,
+  }) => when(
+    skipLoadingOnRefresh: !hasError,
+    loading: loading,
+    error: error,
+    data: data,
+  );
 }

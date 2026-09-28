@@ -284,24 +284,26 @@ const _commitPool = [
   'Ajusta los tiempos de espera del cliente HTTP',
 ];
 
-List<Map<String, dynamic>> demoCommits(DemoPush push, String projectPath) =>
-    List.generate(push.commits, (i) {
-      // compare devuelve del más antiguo al más nuevo; el título del push es el último.
-      final isLast = i == push.commits - 1;
-      final sha = _sha(push.projectId * 100 + i + push.ref.length);
-      demoPushByCommitSha[sha] = push;
-      demoCommitIndex[sha] = i;
-      return {
-        'id': sha,
-        'short_id': sha.substring(0, 8),
-        'title': isLast ? push.lastTitle : _commitPool[i % _commitPool.length],
-        'message': null,
-        'author_name': demoMe['name'],
-        'author_email': 'laura@acme.dev',
-        'created_at': _ago(Duration(minutes: 25 + (push.commits - 1 - i) * 17)),
-        'web_url': '${projectUrl(projectPath)}/-/commit/$sha',
-      };
-    });
+List<Map<String, dynamic>> demoCommits(
+  DemoPush push,
+  String projectPath,
+) => List.generate(push.commits, (i) {
+  // compare va del más antiguo al más nuevo: el título del push es el último.
+  final isLast = i == push.commits - 1;
+  final sha = _sha(push.projectId * 100 + i + push.ref.length);
+  demoPushByCommitSha[sha] = push;
+  demoCommitIndex[sha] = i;
+  return {
+    'id': sha,
+    'short_id': sha.substring(0, 8),
+    'title': isLast ? push.lastTitle : _commitPool[i % _commitPool.length],
+    'message': null,
+    'author_name': demoMe['name'],
+    'author_email': 'laura@acme.dev',
+    'created_at': _ago(Duration(minutes: 25 + (push.commits - 1 - i) * 17)),
+    'web_url': '${projectUrl(projectPath)}/-/commit/$sha',
+  };
+});
 
 Map<String, dynamic> _mr(
   int id,
@@ -450,7 +452,7 @@ final _mr84 = _mr(
   notes: 6,
 );
 
-/// MRs por scope de la API (`created_by_me`, `reviews_for_me`, `assigned_to_me`).
+/// MRs por scope de la API: `created_by_me`, `reviews_for_me`…
 Map<String, List<Map<String, dynamic>>> demoMergeRequests() => {
   'created_by_me': [_mr142, _mr88, _mr57, _mr85, _mr80],
   'reviews_for_me': [_mr87, _mr23, _mr84],
@@ -568,3 +570,9 @@ List<Map<String, dynamic>> demoTodos() => [
     'project': {'name_with_namespace': 'Acme / app-movil'},
   },
 ];
+
+/// Quién aprobó cada MR al arrancar, por id global. El usuario demo, nadie.
+Map<int, List<Map<String, dynamic>>> demoApprovers() => {
+  5142: [_carlos],
+  5023: [_carlos, _julian],
+};

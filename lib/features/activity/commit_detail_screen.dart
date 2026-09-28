@@ -78,7 +78,7 @@ class CommitDetailScreen extends ConsumerWidget {
             ),
           ),
           const Divider(height: 1),
-          diff.when(
+          diff.view(
             loading: () => const Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),

@@ -10,6 +10,11 @@ class SessionExpiredException implements Exception {
   String toString() => 'La sesión de GitLab expiró o fue revocada.';
 }
 
+/// El interceptor la rechaza envuelta en un DioException: hay que mirar dentro.
+bool isSessionExpired(Object? error) =>
+    error is SessionExpiredException ||
+    (error is DioException && error.error is SessionExpiredException);
+
 /// Una página de resultados de la API, con la info de paginación que GitLab
 /// devuelve en cabeceras (no en el cuerpo).
 class Page<T> {
@@ -94,10 +99,28 @@ class GitlabClient {
     );
   }
 
-  void _ensureOk(Response<dynamic> response) {
+  /// POST de una acción. `approve` responde 401 cuando no se puede aprobar
+  /// (por ejemplo, ya aprobado): ahí un 401 no significa sesión caducada.
+  Future<T> post<T>(
+    String path, {
+    Map<String, dynamic>? data,
+    required T Function(Map<String, dynamic>) parse,
+  }) async {
+    final response = await _dio.post<dynamic>(path, data: data);
+    _ensureOk(response, unauthorizedMeansExpired: false);
+    final body = response.data;
+    return parse(body is Map<String, dynamic> ? body : const {});
+  }
+
+  void _ensureOk(
+    Response<dynamic> response, {
+    bool unauthorizedMeansExpired = true,
+  }) {
     final status = response.statusCode ?? 0;
-    if (status == 200) return;
-    if (status == 401) throw const SessionExpiredException();
+    if (status >= 200 && status < 300) return;
+    if (status == 401 && unauthorizedMeansExpired) {
+      throw const SessionExpiredException();
+    }
     throw DioException(
       requestOptions: response.requestOptions,
       response: response,

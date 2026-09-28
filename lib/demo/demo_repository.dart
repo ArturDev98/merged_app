@@ -3,6 +3,7 @@ import '../core/data/gitlab_repository.dart';
 import '../core/models/activity_event.dart';
 import '../core/models/gitlab_project.dart';
 import '../core/models/gitlab_user.dart';
+import '../core/models/merge_request_approvals.dart';
 import '../core/models/merge_request_detail.dart';
 import '../core/models/merge_request_summary.dart';
 import '../core/models/file_diff.dart';
@@ -18,6 +19,9 @@ class DemoRepository extends GitlabRepository {
 
   late final List<Map<String, dynamic>> _events = demoEvents();
   late final List<Map<String, dynamic>> _projects = demoProjects();
+
+  // MRs aprobados por el usuario demo durante la sesión.
+  final _approvedByMe = <int>{};
 
   Future<T> _later<T>(T Function() build) => Future.delayed(_latency, build);
 
@@ -123,6 +127,49 @@ class DemoRepository extends GitlabRepository {
     final extra = demoMergeRequestExtras()[mr['id']] ?? const {};
     return MergeRequestDetail.fromJson({...mr, ...extra});
   });
+
+  int _mrId(int projectId, int iid) =>
+      demoMergeRequests().values
+              .expand((list) => list)
+              .firstWhere(
+                (mr) => mr['project_id'] == projectId && mr['iid'] == iid,
+              )['id']
+          as int;
+
+  MergeRequestApprovals _approvalsOf(int id) {
+    final by = [
+      ...?demoApprovers()[id],
+      if (_approvedByMe.contains(id)) demoMe,
+    ];
+    return MergeRequestApprovals.fromJson({
+      'approved': by.isNotEmpty,
+      'approved_by': [
+        for (final user in by) {'user': user},
+      ],
+      'user_can_approve': true,
+    });
+  }
+
+  @override
+  Future<MergeRequestApprovals> approvals({
+    required int projectId,
+    required int iid,
+  }) => _later(() => _approvalsOf(_mrId(projectId, iid)));
+
+  @override
+  Future<MergeRequestApprovals> approve({
+    required int projectId,
+    required int iid,
+    String? sha,
+  }) => _later(() {
+    final id = _mrId(projectId, iid);
+    _approvedByMe.add(id);
+    return _approvalsOf(id);
+  });
+
+  @override
+  Future<void> unapprove({required int projectId, required int iid}) =>
+      _later(() => _approvedByMe.remove(_mrId(projectId, iid)));
 
   @override
   Future<List<TodoItem>> pendingTodos({int perPage = 100}) =>

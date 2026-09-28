@@ -229,17 +229,21 @@ Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
 
 ### Fase 7 — Aprobar merge requests
 
-- [ ] Scope `api` en lugar de `read_api`: añadirlo a "Merged (Dev)" en GitLab
-      (lo hace el autor) y pedirlo en `AuthService`. Obliga a volver a iniciar
-      sesión una vez
-- [ ] Aprobar y quitar la aprobación (`POST …/approve`, `…/unapprove`,
-      disponibles en todos los planes, incluido Free), con confirmación y
-      estado de quién ha aprobado
-- [ ] "Denegar" no existe en la API. Decidir la alternativa: quitar la
-      aprobación, dejar un comentario pidiendo cambios o cerrar el MR
-- [ ] Retirar el "solo lectura" del login, el README y los textos
-- [ ] Probar con un MR real asignado por un compañero: la cuenta del autor
-      nunca tiene MRs para revisar
+- [x] Scope `api` en lugar de `read_api`: añadido a "Merged (Dev)" en GitLab
+      el 2026-09-28 y pedido en `AuthService`. Una sesión guardada con otros
+      permisos se descarta sola y el login vuelve a pedirlos, una vez
+- [x] Aprobar y quitar la aprobación (`POST …/approve`, `…/unapprove`), con
+      confirmación y la lista de quién ha aprobado. Se aprueba con el `sha`
+      visto: si el MR cambió entretanto, GitLab responde 409 y se avisa
+- [x] "Denegar" no existe en la API. Decidido el 2026-09-28: solo se ofrece
+      quitar la aprobación propia
+- [x] Retirado el "solo lectura" del login y del README
+- [x] Tras iniciar sesión, perfil, actividad y proyectos se quedaban en error
+      hasta reintentar: el login los pedía sin token. Ahora los datos se atan
+      a la sesión, el login no pide nada y la sesión caducada se reconoce
+- [x] Reintentar enseña el cargando en todas las pantallas, y cerrar sesión
+      borra lo guardado para ver sin conexión
+- [ ] Probar con un MR real asignado por un compañero (el !621)
 
 ### Fase 8 — Detalle de proyecto
 

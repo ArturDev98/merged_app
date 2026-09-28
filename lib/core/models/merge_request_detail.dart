@@ -42,6 +42,7 @@ class MergeRequestDetail {
     this.mergedAt,
     this.closedAt,
     this.changesCount,
+    this.sha,
   });
 
   final MergeRequestSummary summary;
@@ -64,6 +65,9 @@ class MergeRequestDetail {
   /// llega vacío mientras calcula el diff de un MR recién creado.
   final String? changesCount;
 
+  /// Último commit del MR: al aprobar se envía para no aprobar algo que cambió.
+  final String? sha;
+
   /// El número, o null si no llegó. "1000+" cuenta como 1000.
   int? get changedFiles =>
       int.tryParse(changesCount?.replaceAll('+', '') ?? '');
@@ -85,6 +89,7 @@ class MergeRequestDetail {
       mergedAt: DateTime.tryParse(json['merged_at'] as String? ?? ''),
       closedAt: DateTime.tryParse(json['closed_at'] as String? ?? ''),
       changesCount: json['changes_count']?.toString(),
+      sha: json['sha'] as String?,
     );
   }
 }

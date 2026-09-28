@@ -12,8 +12,8 @@ class AuthService {
   final FlutterAppAuth _appAuth = const FlutterAppAuth();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // App OAuth "Merged (Dev)" de gitlab.com. No es un secreto: un cliente público
-  // con PKCE lo lleva en el binario. La de producción irá en un grupo (PLAN.md).
+  // App OAuth "Merged (Dev)". No es secreto: un cliente público con PKCE lo
+  // lleva en el binario. La de producción irá en un grupo (PLAN.md).
   static const String _clientId =
       'f9192e195fbe00cee1b1ec0df918b183af0a648578aec3c040d1aa519e2338a8';
 
@@ -21,9 +21,14 @@ class AuthService {
   static const String _discoveryUrl =
       'https://gitlab.com/.well-known/openid-configuration';
 
+  // `api` incluye la lectura y permite aprobar MRs. Si la lista cambia, las
+  // sesiones guardadas con otra se descartan y el login vuelve a pedirla.
+  static const _scopes = ['api'];
+
   static const _keyAccessToken = 'gl_access_token';
   static const _keyRefreshToken = 'gl_refresh_token';
   static const _keyExpiry = 'gl_expiry';
+  static const _keyScopes = 'gl_scopes';
 
   /// Último fallo de login, ya clasificado para que la UI no tenga que
   /// interpretar excepciones ni enseñar su `toString()`.
@@ -39,7 +44,7 @@ class AuthService {
           _clientId,
           _redirectUri,
           discoveryUrl: _discoveryUrl,
-          scopes: ['read_api', 'read_user'],
+          scopes: _scopes,
         ),
       );
 
@@ -53,6 +58,7 @@ class AuthService {
       }
 
       await _persistTokens(result);
+      await _storage.write(key: _keyScopes, value: _scopes.join(' '));
       return true;
     } catch (e) {
       lastFailure = AuthFailure.from(e);
@@ -103,7 +109,7 @@ class AuthService {
           discoveryUrl: _discoveryUrl,
           refreshToken: refreshToken,
           grantType: 'refresh_token',
-          scopes: ['read_api', 'read_user'],
+          scopes: _scopes,
         ),
       );
 
@@ -122,6 +128,10 @@ class AuthService {
   }
 
   Future<bool> isLoggedIn() async {
+    if (await _storage.read(key: _keyScopes) != _scopes.join(' ')) {
+      await logout();
+      return false;
+    }
     return (await getValidAccessToken()) != null;
   }
 
@@ -129,5 +139,6 @@ class AuthService {
     await _storage.delete(key: _keyAccessToken);
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyExpiry);
+    await _storage.delete(key: _keyScopes);
   }
 }

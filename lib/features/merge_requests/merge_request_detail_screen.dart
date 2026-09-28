@@ -90,7 +90,7 @@ class MergeRequestDetailScreen extends ConsumerWidget {
             const Divider(height: 1),
             // El pipeline y el diagnóstico de fusión solo existen en el
             // detalle, así que tienen su propio bloque de carga.
-            detail.when(
+            detail.view(
               loading: () => const Padding(
                 padding: EdgeInsets.all(28),
                 child: Center(child: CircularProgressIndicator()),
@@ -178,6 +178,7 @@ class _DetailBody extends StatelessWidget {
             ),
             title: Text('${detail.upvotes} 👍 · ${detail.downvotes} 👎'),
           ),
+        _Approvals(detail: detail),
         if (description != null && description.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -248,7 +249,7 @@ class _Changes extends ConsumerWidget {
     final key = (projectId: mr.projectId, iid: mr.iid);
     return ref
         .watch(mergeRequestDiffsProvider(key))
-        .when(
+        .view(
           loading: () => const Padding(
             padding: EdgeInsets.all(28),
             child: Center(child: CircularProgressIndicator()),
@@ -264,4 +265,175 @@ class _Changes extends ConsumerWidget {
           ),
         );
   }
+}
+
+class _Approvals extends ConsumerStatefulWidget {
+  const _Approvals({required this.detail});
+
+  final MergeRequestDetail detail;
+
+  @override
+  ConsumerState<_Approvals> createState() => _ApprovalsState();
+}
+
+class _ApprovalsState extends ConsumerState<_Approvals> {
+  bool _busy = false;
+
+  MrRef get _key => (
+    projectId: widget.detail.summary.projectId,
+    iid: widget.detail.summary.iid,
+  );
+
+  Future<void> _run({required bool approve}) async {
+    final mr = widget.detail.summary;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          approve ? '¿Aprobar !${mr.iid}?' : '¿Quitar tu aprobación?',
+        ),
+        content: Text(mr.title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(approve ? 'Aprobar' : 'Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final repo = ref.read(gitlabRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (approve) {
+        await repo.approve(
+          projectId: mr.projectId,
+          iid: mr.iid,
+          sha: widget.detail.sha,
+        );
+      } else {
+        await repo.unapprove(projectId: mr.projectId, iid: mr.iid);
+      }
+      // El diagnóstico de fusión puede cambiar con la aprobación.
+      ref.invalidate(mergeRequestApprovalsProvider(_key));
+      ref.invalidate(mergeRequestDetailProvider(_key));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            approve ? 'Merge request aprobado' : 'Aprobación retirada',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(approvalErrorMessage(error, approving: approve)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final approvals = ref.watch(mergeRequestApprovalsProvider(_key));
+    final me = ref.watch(currentUserProvider).valueOrNull;
+    final colors = MergedColors.of(context);
+    final theme = Theme.of(context);
+    final open = widget.detail.summary.state == 'opened';
+
+    return approvals.view(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, _) => ListTile(
+        leading: ToneIcon(
+          icon: Icons.how_to_reg_outlined,
+          tone: colors.neutral,
+        ),
+        title: const Text('No se pudo ver quién lo aprobó'),
+        trailing: TextButton(
+          onPressed: () => ref.invalidate(mergeRequestApprovalsProvider(_key)),
+          child: const Text('Reintentar'),
+        ),
+      ),
+      data: (data) {
+        final mine = me != null && data.approvedByUser(me.id);
+        final names = data.approvedBy.map((u) => u.name).toList();
+        final left = data.approvalsLeft ?? 0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: ToneIcon(
+                icon: Icons.how_to_reg_outlined,
+                tone: names.isEmpty ? colors.neutral : colors.green,
+              ),
+              title: Text(
+                names.isEmpty
+                    ? 'Sin aprobaciones'
+                    : 'Aprobado por ${_joinNames(names)}',
+              ),
+              subtitle: left > 0
+                  ? Text(
+                      left == 1
+                          ? 'Falta 1 aprobación'
+                          : 'Faltan $left aprobaciones',
+                    )
+                  : null,
+            ),
+            if (open)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: mine
+                    ? OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _run(approve: false),
+                        icon: const Icon(Icons.undo),
+                        label: const Text('Quitar mi aprobación'),
+                      )
+                    : data.userCanApprove == false
+                    ? Text(
+                        'Tu cuenta no puede aprobar este merge request.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : FilledButton.icon(
+                        onPressed: _busy ? null : () => _run(approve: true),
+                        icon: _busy
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.check),
+                        label: const Text('Aprobar'),
+                      ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  static String _joinNames(List<String> names) => switch (names.length) {
+    1 => names.single,
+    2 => '${names[0]} y ${names[1]}',
+    _ => '${names[0]} y ${names.length - 1} más',
+  };
 }
