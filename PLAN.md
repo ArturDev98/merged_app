@@ -140,6 +140,10 @@ lib/
 - [x] `flutter analyze` sin avisos
 - [x] Identidad real: `com.example.merged_app` → `dev.merged.app` (Android, iOS
       y macOS)
+- [x] CI en GitHub Actions: formato, análisis y tests en cada push y PR
+      (2026-09-27)
+- [x] Fuera `linux/`, `macos/` y `windows/`: la v0.1 es Android; `web/` se
+      queda para el modo demo e `ios/` para cuando toque
 
 ### Fase 1 — Capa de datos — ✅ completada
 

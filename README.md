@@ -1,5 +1,7 @@
 # Merged
 
+[![CI](https://github.com/ArturDev98/merged_app/actions/workflows/ci.yml/badge.svg)](https://github.com/ArturDev98/merged_app/actions/workflows/ci.yml)
+
 **GitLab resumido en el móvil.** Inicias sesión con tu cuenta de GitLab y ves de
 un vistazo tu informe personal: tu actividad, tus commits, tus merge requests,
 tus ramas y lo que te está esperando.
@@ -74,6 +76,9 @@ y pon su *Application ID* en `_clientId`, en
 flutter analyze
 flutter test
 ```
+
+La CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) comprueba lo
+mismo y el formato (`dart format`) en cada push a `main` y en cada pull request.
 
 ```
 lib/
