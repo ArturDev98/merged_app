@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme_mode_controller.dart';
 import '../../shared/activity_labels.dart';
+import '../../shared/merge_request_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
@@ -42,7 +43,7 @@ class SummaryScreen extends ConsumerWidget {
             ref.invalidate(recentEventsProvider);
             ref.invalidate(activitySummaryProvider);
             ref.invalidate(pendingWorkProvider);
-            ref.invalidate(myOpenMergeRequestsProvider);
+            ref.invalidate(openMergeRequestsByScopeProvider);
             ref.invalidate(projectsProvider);
             await ref.read(activityFeedProvider.notifier).refresh();
           },
@@ -421,9 +422,14 @@ class _Shortcuts extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = MergedColors.of(context);
-    final myMrs = ref.watch(myOpenMergeRequestsProvider);
-    final branches = ref.watch(createdBranchesProvider);
-    final projects = ref.watch(projectsProvider);
+    final openMrs = ref.watch(openMergeRequestsProvider);
+    final mrs = openMrs.valueOrNull;
+    final branches = ref.watch(createdBranchesProvider).valueOrNull?.length;
+    final projects = ref.watch(projectsProvider).valueOrNull?.length;
+    final landing = MrScope.values.firstWhere(
+      (scope) => scope.apiValue == mrs?.firstScopeWithItems,
+      orElse: () => MrScope.created,
+    );
 
     void open(Widget screen) =>
         Navigator.of(context)
@@ -434,27 +440,28 @@ class _Shortcuts extends ConsumerWidget {
         _ShortcutTile(
           icon: Icons.merge_type,
           tone: colors.purple,
-          value: myMrs.valueOrNull?.length,
-          loading: myMrs.isLoading,
-          label: 'MRs abiertos',
-          onTap: () => open(const MergeRequestsScreen()),
+          value: mrs?.count,
+          capped: mrs?.capped ?? false,
+          loading: openMrs.isLoading,
+          label: mrs?.count == 1 ? 'MR abierto' : 'MRs abiertos',
+          onTap: () => open(MergeRequestsScreen(initialScope: landing)),
         ),
         const SizedBox(width: 10),
         _ShortcutTile(
           icon: Icons.call_split,
           tone: colors.amber,
-          value: branches.valueOrNull?.length,
-          loading: branches.isLoading,
-          label: 'Ramas nuevas',
+          value: branches,
+          loading: ref.watch(createdBranchesProvider).isLoading,
+          label: branches == 1 ? 'Rama nueva' : 'Ramas nuevas',
           onTap: () => open(const BranchesScreen()),
         ),
         const SizedBox(width: 10),
         _ShortcutTile(
           icon: Icons.folder_outlined,
           tone: colors.blue,
-          value: projects.valueOrNull?.length,
-          loading: projects.isLoading,
-          label: 'Proyectos',
+          value: projects,
+          loading: ref.watch(projectsProvider).isLoading,
+          label: projects == 1 ? 'Proyecto' : 'Proyectos',
           onTap: () => open(const ProjectsScreen()),
         ),
       ],
@@ -470,12 +477,16 @@ class _ShortcutTile extends StatelessWidget {
     required this.loading,
     required this.label,
     required this.onTap,
+    this.capped = false,
   });
 
   final IconData icon;
   final Tone tone;
   final int? value;
   final bool loading;
+
+  /// Hay más de los que se descargaron: el número es un mínimo.
+  final bool capped;
   final String label;
   final VoidCallback onTap;
 
@@ -509,7 +520,11 @@ class _ShortcutTile extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  loading && value == null ? '·' : (value?.toString() ?? '—'),
+                  loading && value == null
+                      ? '·'
+                      : value == null
+                      ? '—'
+                      : '$value${capped ? '+' : ''}',
                   style: theme.textTheme.titleLarge,
                 ),
                 Text(

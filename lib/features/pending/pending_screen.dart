@@ -19,6 +19,14 @@ class PendingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pending = ref.watch(pendingWorkProvider);
 
+    // Los MRs vienen de descargas compartidas con la home: se invalidan aparte,
+    // o seguirían sirviendo el resultado (o el error) anterior.
+    Future<void> reload() async {
+      ref.invalidate(openMergeRequestsByScopeProvider);
+      ref.invalidate(pendingWorkProvider);
+      await ref.read(pendingWorkProvider.future);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pendientes'),
@@ -38,10 +46,7 @@ class PendingScreen extends ConsumerWidget {
       body: pending.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
-          child: ErrorView(
-            error: error,
-            onRetry: () => ref.invalidate(pendingWorkProvider),
-          ),
+          child: ErrorView(error: error, onRetry: reload),
         ),
         data: (items) {
           if (items.isEmpty) {
@@ -54,7 +59,7 @@ class PendingScreen extends ConsumerWidget {
             );
           }
           return RefreshIndicator(
-            onRefresh: () async => ref.refresh(pendingWorkProvider.future),
+            onRefresh: reload,
             child: ListView.separated(
               itemCount: items.length,
               separatorBuilder: (_, _) => const Divider(indent: 68),

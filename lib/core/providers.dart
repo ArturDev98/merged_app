@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api/gitlab_client.dart';
 import 'auth/auth_service.dart';
 import 'data/gitlab_repository.dart';
+import 'data/open_merge_requests.dart';
 import 'data/pending_work.dart';
 import 'models/gitlab_project.dart';
 import 'models/gitlab_user.dart';
@@ -42,11 +43,14 @@ final projectsByIdProvider = Provider<Map<int, GitlabProject>>((ref) {
 
 /// Lo que espera al usuario, ya deduplicado. Alimenta la campana.
 final pendingWorkProvider = FutureProvider<List<PendingItem>>((ref) async {
-  final repo = ref.watch(gitlabRepositoryProvider);
   // Se lanzan las tres a la vez y se esperan después: son independientes.
-  final todos = repo.pendingTodos();
-  final reviewing = repo.mergeRequests(scope: 'reviews_for_me');
-  final assigned = repo.mergeRequests(scope: 'assigned_to_me');
+  final todos = ref.watch(gitlabRepositoryProvider).pendingTodos();
+  final reviewing = ref.watch(
+    openMergeRequestsByScopeProvider('reviews_for_me').future,
+  );
+  final assigned = ref.watch(
+    openMergeRequestsByScopeProvider('assigned_to_me').future,
+  );
 
   return mergePendingWork(
     todos: await todos,
@@ -55,15 +59,24 @@ final pendingWorkProvider = FutureProvider<List<PendingItem>>((ref) async {
   );
 });
 
-/// Los MRs propios abiertos. Deliberadamente fuera de la campana: son trabajo
-/// en curso, no algo que bloquee al usuario.
-final myOpenMergeRequestsProvider = FutureProvider<List<MergeRequestSummary>>((
+/// MRs abiertos de un scope. La campana y el acceso de la home comparten estas
+/// descargas en vez de repetirlas.
+final openMergeRequestsByScopeProvider =
+    FutureProvider.family<Page<MergeRequestSummary>, String>(
+      (ref, scope) =>
+          ref.watch(gitlabRepositoryProvider).mergeRequests(scope: scope),
+    );
+
+final openMergeRequestsProvider = FutureProvider<OpenMergeRequests>((
   ref,
 ) async {
-  final page = await ref
-      .watch(gitlabRepositoryProvider)
-      .mergeRequests(scope: 'created_by_me');
-  return page.items;
+  final pages = await Future.wait([
+    for (final scope in mrScopes)
+      ref.watch(openMergeRequestsByScopeProvider(scope).future),
+  ]);
+  return OpenMergeRequests({
+    for (final (i, scope) in mrScopes.indexed) scope: pages[i],
+  });
 });
 
 /// Ventana de actividad para los contadores del resumen.

@@ -203,7 +203,7 @@ correctos. El splash pasa a la fase 5.
       navegación, temas y datos reales correctos. Solo salió "hace 1 meses",
       ya corregido
 
-### Fase 6 — Ver los cambios
+### Fase 6 — Ver los cambios — ✅ completada
 
 Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
 
@@ -222,7 +222,10 @@ Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
 - [x] JetBrains Mono incluida para el código: la `monospace` del sistema no
       existe en web y en Android cambia según el fabricante
 - [x] Datos de diffs en el modo demo, con los casos límite
-- [ ] Probar en el teléfono con pushes y MRs reales, incluido uno grande
+- [x] Validada en el teléfono el 2026-09-28 con pushes, commits y MRs reales
+- [x] El acceso "MRs abiertos" de la home cuenta propios, asignados y a
+      revisar, sin repetir, y abre la pestaña que tenga algo. Solo contaba los
+      propios y un MR asignado dejaba el contador en 0
 
 ### Fase 7 — Aprobar merge requests
 
