@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "merged-demo",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "flutter",
+        "run",
+        "-d",
+        "web-server",
+        "--release",
+        "--web-port",
+        "8686",
+        "-t",
+        "lib/demo/main_demo.dart"
+      ],
+      "port": 8686
+    }
+  ]
+}

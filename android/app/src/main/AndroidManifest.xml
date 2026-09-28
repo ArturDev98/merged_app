@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="merged_app"
+        android:label="Merged"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- OJO con dos cosas en esta activity, ambas necesarias para que el

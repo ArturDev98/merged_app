@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mismo teal que el fondo del icono: el splash se lee como el icono ampliado. -->
+    <color name="splash_background">#00695C</color>
+</resources>
