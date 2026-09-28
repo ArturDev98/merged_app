@@ -14,7 +14,8 @@ class AuthService {
   final FlutterAppAuth _appAuth = const FlutterAppAuth();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // TODO: reemplaza esto por tu Client ID real de GitLab.
+  // App OAuth "Merged (Dev)" de gitlab.com. No es un secreto: un cliente público
+  // con PKCE lo lleva en el binario. La de producción irá en un grupo (PLAN.md).
   static const String _clientId =
       'f9192e195fbe00cee1b1ec0df918b183af0a648578aec3c040d1aa519e2338a8';
 

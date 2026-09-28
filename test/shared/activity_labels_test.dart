@@ -16,7 +16,7 @@ void main() {
       // título y otra vez en el subtítulo, sin explicar nada.
       final event = _event({
         'action_name': 'joined',
-        'target_title': 'personas-front',
+        'target_title': 'portal-proveedores',
       });
 
       expect(describeActivity(event), 'Te uniste al proyecto');

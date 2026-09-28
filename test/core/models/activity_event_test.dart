@@ -17,7 +17,7 @@ void main() {
       final push = _event({
         'action': 'created',
         'ref_type': 'branch',
-        'ref': 'fix/mantis',
+        'ref': 'feature/cupones',
         'commit_count': 3,
         'commit_from': null,
         'commit_to': 'abc123',

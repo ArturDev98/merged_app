@@ -83,7 +83,7 @@ class _BranchTile extends ConsumerWidget {
 
     // Los eventos no traen la URL de la rama; se compone con la del proyecto.
     // El nombre se codifica porque las ramas suelen llevar barras
-    // (fix/valorPrima) y romperían la ruta.
+    // (fix/login-biometrico) y romperían la ruta.
     final url = project?.webUrl != null
         ? '${project!.webUrl}/-/tree/${Uri.encodeComponent(push.ref)}'
         : null;
