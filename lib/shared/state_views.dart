@@ -93,8 +93,8 @@ class ErrorView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(described.icon, size: 48, color: scheme.outline),
-          const SizedBox(height: 14),
+          _StateIcon(icon: described.icon),
+          const SizedBox(height: 16),
           Text(
             described.title,
             style: theme.textTheme.titleMedium,
@@ -103,7 +103,9 @@ class ErrorView extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             described.message,
-            style: theme.textTheme.bodySmall?.copyWith(color: scheme.outline),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
           if (onRetry != null) ...[
@@ -169,8 +171,8 @@ class EmptyView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 44, color: scheme.outline),
-          const SizedBox(height: 12),
+          _StateIcon(icon: icon),
+          const SizedBox(height: 16),
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium,
@@ -180,13 +182,33 @@ class EmptyView extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               message!,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: scheme.outline),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _StateIcon extends StatelessWidget {
+  const _StateIcon({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 34, color: scheme.onSurfaceVariant),
     );
   }
 }

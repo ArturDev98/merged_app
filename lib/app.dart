@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
+import 'core/theme/app_theme.dart';
 import 'core/theme_mode_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/summary/summary_screen.dart';
@@ -15,12 +17,12 @@ class MergedApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Merged',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.teal,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
+      // Solo español en la v0.1 (ver PLAN.md).
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
       home: const _AuthGate(),
     );

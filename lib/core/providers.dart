@@ -77,12 +77,16 @@ class ActivitySummary {
     required this.commits,
     required this.branchesCreated,
     required this.projectsTouched,
+    required this.activeDays,
   });
 
   final int pushes;
   final int commits;
   final int branchesCreated;
   final int projectsTouched;
+
+  /// Días con algún evento, no solo pushes.
+  final int activeDays;
 }
 
 /// Eventos de la ventana reciente, en crudo.
@@ -115,8 +119,11 @@ final activitySummaryProvider = FutureProvider<ActivitySummary>((ref) async {
   var commits = 0;
   var branches = 0;
   final projects = <int>{};
+  final days = <DateTime>{};
 
   for (final event in events) {
+    final local = event.createdAt.toLocal();
+    days.add(DateTime(local.year, local.month, local.day));
     final push = event.pushData;
     if (push == null) continue;
     pushes++;
@@ -130,6 +137,7 @@ final activitySummaryProvider = FutureProvider<ActivitySummary>((ref) async {
     commits: commits,
     branchesCreated: branches,
     projectsTouched: projects.length,
+    activeDays: days.length,
   );
 });
 

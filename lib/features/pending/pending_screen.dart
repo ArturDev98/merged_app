@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/pending_work.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/merge_request_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../merge_requests/merge_requests_screen.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 
 /// La lista que hay detrás de la campana.
 class PendingScreen extends ConsumerWidget {
@@ -55,7 +57,7 @@ class PendingScreen extends ConsumerWidget {
             onRefresh: () async => ref.refresh(pendingWorkProvider.future),
             child: ListView.separated(
               itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(indent: 68),
               itemBuilder: (context, index) => _PendingTile(item: items[index]),
             ),
           );
@@ -72,13 +74,19 @@ class _PendingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListTile(
-      leading: Icon(_iconFor(item.kind), color: _colorFor(item.kind, theme)),
+      leading: ToneIcon(
+        icon: _iconFor(item.kind),
+        tone: _toneFor(item.kind, MergedColors.of(context)),
+      ),
       title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text('${item.reason} · ${relativeTime(item.at)}'),
       // Solo lectura: la acción real ocurre en GitLab.
-      trailing: const Icon(Icons.open_in_new, size: 18),
+      trailing: Icon(
+        Icons.open_in_new,
+        size: 18,
+        color: Theme.of(context).colorScheme.outline,
+      ),
       onTap: () => openInGitlab(context, item.webUrl),
     );
   }
@@ -89,9 +97,9 @@ class _PendingTile extends StatelessWidget {
     PendingKind.assigned => Icons.assignment_ind_outlined,
   };
 
-  static Color _colorFor(PendingKind kind, ThemeData theme) => switch (kind) {
-    PendingKind.todo => theme.colorScheme.error,
-    PendingKind.reviewRequest => theme.colorScheme.primary,
-    PendingKind.assigned => theme.colorScheme.tertiary,
+  static Tone _toneFor(PendingKind kind, MergedColors colors) => switch (kind) {
+    PendingKind.todo => colors.coral,
+    PendingKind.reviewRequest => colors.purple,
+    PendingKind.assigned => colors.blue,
   };
 }

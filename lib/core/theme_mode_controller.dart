@@ -46,7 +46,7 @@ final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
 );
 
 String themeModeLabel(ThemeMode mode) => switch (mode) {
-  ThemeMode.system => 'Según el sistema',
+  ThemeMode.system => 'Sistema',
   ThemeMode.light => 'Claro',
   ThemeMode.dark => 'Oscuro',
 };

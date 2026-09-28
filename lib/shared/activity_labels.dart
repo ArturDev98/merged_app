@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/models/activity_event.dart';
+import '../core/theme/app_theme.dart';
 
 /// Traduce `action_name` de GitLab a una frase en primera persona.
 ///
@@ -11,9 +12,10 @@ import '../core/models/activity_event.dart';
 String describeActivity(ActivityEvent event) {
   final push = event.pushData;
   if (push != null) {
+    final ref = push.isBranch ? 'la rama' : 'la etiqueta';
     return switch (push.action) {
-      PushAction.created => 'Creaste la rama',
-      PushAction.removed => 'Borraste la rama',
+      PushAction.created => 'Creaste $ref',
+      PushAction.removed => 'Borraste $ref',
       PushAction.pushed || PushAction.unknown => 'Hiciste push',
     };
   }
@@ -45,8 +47,9 @@ String? _targetLabel(String? targetType) => switch (targetType) {
 IconData activityIcon(ActivityEvent event) {
   final push = event.pushData;
   if (push != null) {
-    if (push.createsBranch) return Icons.call_split;
     if (push.action == PushAction.removed) return Icons.delete_outline;
+    if (!push.isBranch) return Icons.sell_outlined;
+    if (push.createsBranch) return Icons.call_split;
     return Icons.arrow_upward;
   }
 
@@ -59,5 +62,24 @@ IconData activityIcon(ActivityEvent event) {
     'commented on' => Icons.mode_comment_outlined,
     'created' => Icons.create_new_folder_outlined,
     _ => Icons.bolt_outlined,
+  };
+}
+
+/// Color del evento: teal los pushes, ámbar ramas y etiquetas, morado los MRs.
+Tone activityTone(ActivityEvent event, MergedColors colors) {
+  final push = event.pushData;
+  if (push != null) {
+    return switch (push.action) {
+      PushAction.removed => colors.red,
+      PushAction.created => colors.amber,
+      _ => push.isBranch ? colors.teal : colors.amber,
+    };
+  }
+
+  if (event.actionName == 'commented on') return colors.blue;
+  return switch (event.targetType) {
+    'MergeRequest' => colors.purple,
+    'Issue' => colors.coral,
+    _ => colors.neutral,
   };
 }

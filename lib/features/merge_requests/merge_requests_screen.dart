@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/merge_request_summary.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/merge_request_labels.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 import 'merge_request_detail_screen.dart';
 
 /// Merge requests del usuario, en tres puntos de vista.
@@ -39,18 +41,6 @@ class _MergeRequestsScreenState extends State<MergeRequestsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Merge requests'),
-        actions: [
-          PopupMenuButton<MrState>(
-            initialValue: _state,
-            tooltip: 'Filtrar por estado',
-            icon: const Icon(Icons.filter_list),
-            onSelected: (value) => setState(() => _state = value),
-            itemBuilder: (context) => [
-              for (final state in MrState.values)
-                PopupMenuItem(value: state, child: Text(state.label)),
-            ],
-          ),
-        ],
         bottom: TabBar(
           controller: _tabs,
           tabs: [for (final scope in MrScope.values) Tab(text: scope.label)],
@@ -58,21 +48,23 @@ class _MergeRequestsScreenState extends State<MergeRequestsScreen>
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+          // Filtro a la vista y no en un menú: se cambia de un toque y siempre
+          // se ve cuál está activo, que es lo que explica un vacío.
+          SizedBox(
+            height: 56,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
               children: [
-                Icon(
-                  Icons.filter_list,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _state.label,
-                  style: Theme.of(context).textTheme.labelMedium
-                      ?.copyWith(color: Theme.of(context).colorScheme.outline),
-                ),
+                for (final option in MrState.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _StateChip(
+                      label: option.label,
+                      selected: option == _state,
+                      onSelected: () => setState(() => _state = option),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -143,7 +135,7 @@ class _MergeRequestList extends ConsumerWidget {
         onRefresh: () async => ref.invalidate(mergeRequestListProvider(query)),
         child: ListView.separated(
           itemCount: data.items.length + 1,
-          separatorBuilder: (_, _) => const Divider(height: 1),
+          separatorBuilder: (_, _) => const Divider(indent: 68),
           itemBuilder: (context, index) {
             if (index == data.items.length) {
               return Padding(
@@ -184,7 +176,10 @@ class _MergeRequestTile extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return ListTile(
-      leading: Icon(mrStateIcon(mr), color: mrStateColor(mr, scheme)),
+      leading: ToneIcon(
+        icon: mrStateIcon(mr),
+        tone: mrStateTone(mr, MergedColors.of(context)),
+      ),
       title: Text(mr.title, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         // Nada de pipeline aquí: la lista de la API no lo trae.
@@ -198,7 +193,12 @@ class _MergeRequestTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(relativeTime(mr.updatedAt), style: theme.textTheme.labelSmall),
+          Text(
+            relativeTime(mr.updatedAt),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
           if (mr.userNotesCount > 0) ...[
             const SizedBox(height: 2),
             Row(
@@ -225,6 +225,40 @@ class _MergeRequestTile extends StatelessWidget {
         MaterialPageRoute<void>(
           builder: (_) => MergeRequestDetailScreen(mr: mr),
         ),
+      ),
+    );
+  }
+}
+
+class _StateChip extends StatelessWidget {
+  const _StateChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+      onSelected: (_) => onSelected(),
+      selectedColor: scheme.primary,
+      backgroundColor: scheme.surfaceContainerLow,
+      side: BorderSide(
+        color: selected ? scheme.primary : scheme.outlineVariant,
+      ),
+      shape: const StadiumBorder(),
+      labelStyle: TextStyle(
+        color: selected ? scheme.onPrimary : scheme.onSurface,
+        fontWeight: FontWeight.w500,
       ),
     );
   }

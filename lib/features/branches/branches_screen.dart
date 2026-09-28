@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 
 /// Ramas creadas por el usuario en la ventana reciente.
 ///
@@ -57,7 +59,7 @@ class BranchesScreen extends ConsumerWidget {
             onRefresh: () async => ref.invalidate(recentEventsProvider),
             child: ListView.separated(
               itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(indent: 68),
               itemBuilder: (context, index) => _BranchTile(event: items[index]),
             ),
           );
@@ -87,7 +89,10 @@ class _BranchTile extends ConsumerWidget {
         : null;
 
     return ListTile(
-      leading: const Icon(Icons.call_split, size: 22),
+      leading: ToneIcon(
+        icon: Icons.call_split,
+        tone: MergedColors.of(context).amber,
+      ),
       title: Text(push.ref, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [projectName, ?push.commitTitle].join(' · '),
@@ -100,11 +105,13 @@ class _BranchTile extends ConsumerWidget {
         children: [
           Text(
             relativeTime(event.createdAt),
-            style: theme.textTheme.labelSmall,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           if (url != null) ...[
             const SizedBox(width: 6),
-            const Icon(Icons.open_in_new, size: 14),
+            Icon(Icons.open_in_new, size: 14, color: theme.colorScheme.outline),
           ],
         ],
       ),

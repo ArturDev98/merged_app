@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/models/merge_request_summary.dart';
+import '../core/theme/app_theme.dart';
 
 /// Los tres puntos de vista sobre los merge requests que ofrece la API.
 enum MrScope { created, assigned, reviewing }
@@ -68,11 +69,11 @@ IconData pipelineIcon(String status) => switch (status) {
   _ => Icons.help_outline,
 };
 
-Color pipelineColor(String status, ColorScheme scheme) => switch (status) {
-  'success' => Colors.green.shade700,
-  'failed' => scheme.error,
-  'running' || 'pending' || 'created' => Colors.orange.shade800,
-  _ => scheme.outline,
+Tone pipelineTone(String status, MergedColors colors) => switch (status) {
+  'success' => colors.green,
+  'failed' => colors.red,
+  'running' || 'pending' || 'created' || 'waiting_for_resource' => colors.amber,
+  _ => colors.neutral,
 };
 
 /// Estado del propio merge request, no de su pipeline.
@@ -92,12 +93,12 @@ IconData mrStateIcon(MergeRequestSummary mr) => switch (mr.state) {
   _ => Icons.help_outline,
 };
 
-Color mrStateColor(MergeRequestSummary mr, ColorScheme scheme) =>
+Tone mrStateTone(MergeRequestSummary mr, MergedColors colors) =>
     switch (mr.state) {
-      'opened' => mr.draft ? scheme.outline : Colors.green.shade700,
-      'merged' => Colors.purple.shade400,
-      'closed' => scheme.error,
-      _ => scheme.outline,
+      'opened' => mr.draft ? colors.neutral : colors.green,
+      'merged' => colors.purple,
+      'closed' => colors.red,
+      _ => colors.neutral,
     };
 
 /// Traduce el diagnóstico de fusión de GitLab.
@@ -116,4 +117,14 @@ String? mergeStatusLabel(String? detailedMergeStatus) =>
       'need_rebase' => 'Necesita rebase',
       'blocked_status' => 'Bloqueado por otro merge request',
       _ => null,
+    };
+
+/// Verde si se puede fusionar, rojo si algo lo bloquea, ámbar si solo falta
+/// tiempo o una persona.
+Tone mergeStatusTone(String? detailedMergeStatus, MergedColors colors) =>
+    switch (detailedMergeStatus) {
+      'mergeable' => colors.green,
+      'conflict' || 'need_rebase' || 'blocked_status' => colors.red,
+      'ci_must_pass' => colors.red,
+      _ => colors.amber,
     };

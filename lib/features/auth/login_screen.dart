@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_failure.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
+import '../../shared/tone_icon.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -39,48 +42,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = MergedColors.of(context);
     final failure = _failure;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.merge_rounded,
-                  size: 72,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text('Merged', style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Text(
-                  'Tu GitLab, resumido',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                if (_loading)
-                  const CircularProgressIndicator()
-                else
-                  FilledButton.icon(
-                    onPressed: _login,
-                    icon: const Icon(Icons.login),
-                    label: Text(
-                      failure != null && failure.canRetry
-                          ? 'Intentar de nuevo'
-                          : 'Iniciar sesión con GitLab',
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: colors.header,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MergedMark(size: 128, color: colors.onHeader),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Merged',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: colors.onHeader,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                if (failure != null && !_loading) ...[
-                  const SizedBox(height: 28),
-                  _FailureCard(failure: failure),
-                ],
-              ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tu GitLab, resumido',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.onHeaderMuted,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    if (_loading)
+                      CircularProgressIndicator(color: colors.onHeader)
+                    else
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.onHeader,
+                          foregroundColor: colors.header,
+                          minimumSize: const Size.fromHeight(52),
+                        ),
+                        onPressed: _login,
+                        icon: const Icon(Icons.login),
+                        label: Text(
+                          failure != null && failure.canRetry
+                              ? 'Intentar de nuevo'
+                              : 'Iniciar sesión con GitLab',
+                        ),
+                      ),
+                    if (failure != null && !_loading) ...[
+                      const SizedBox(height: 24),
+                      _FailureCard(failure: failure),
+                    ],
+                    const SizedBox(height: 32),
+                    Text(
+                      'Solo lectura · se conecta directamente con gitlab.com',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onHeaderMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -118,8 +148,8 @@ class _FailureCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [

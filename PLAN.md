@@ -7,7 +7,9 @@ merge requests, sus commits, sus ramas y sus proyectos.
 - **Destino:** app pública. Se valida primero con la cuenta del autor, pero se
   diseña para cualquier usuario de GitLab.
 - **Alcance v0.1:** solo lectura (`read_api` + `read_user`, ya validados).
-- **Instancia:** gitlab.com. Ver "Decisiones abiertas".
+- **Instancia:** solo gitlab.com. Plataforma: Android. Idioma: español. Ver
+  "Decisiones".
+- **Ruta:** pulir la interfaz → beta repartiendo el APK → Play Store.
 
 ---
 
@@ -104,15 +106,20 @@ Responde a una sola pregunta: **¿me están esperando?**
 ```
 lib/
   core/
-    auth/        auth_service.dart          ✅ funcionando
-    api/         gitlab_client.dart         ✅ dio + interceptor + paginación
-                 api_smoke_test.dart        (temporal, se borra en fase 2)
-    models/      user, project, merge_request, todo, push_event, commit
+    auth/        auth_service, auth_failure
+    api/         gitlab_client              dio + interceptor + paginación
+    data/        repositorio, campana (pending_work), caché offline
+    models/      user, project, merge_request, todo, activity_event, commit
+    providers.dart, theme_mode_controller.dart
   features/
+    auth/        login
     summary/     el informe (home)
-    activity/    feed + detalle de push
+    activity/    detalle de push
+    pending/     lista de la campana
     merge_requests/
     projects/
+    branches/
+  shared/        etiquetas, "Abrir en GitLab", tiempos relativos, estados
   app.dart
   main.dart
 ```
@@ -166,26 +173,74 @@ lib/
 
 - [x] Ramas creadas, derivadas de los eventos (sin llamadas extra)
 - [x] Tema claro/oscuro con selector persistente, e icono adaptativo
-- [ ] Splash propio (sigue el del template)
 - [x] Caché offline: última respuesta buena, con aviso de datos guardados
 - [x] Sesión expirada: el gate vuelve al login solo
 
+Fases 3 y 4 validadas en el teléfono el 2026-09-27: datos y navegación
+correctos. El splash pasa a la fase 5.
+
+### Fase 5 — Pulido de interfaz
+
+- [x] Nombre visible "Merged" en Android, iOS y web
+- [x] Splash propio, claro y oscuro, también con la API de Android 12+
+      (falta verlo en el teléfono)
+- [x] Modo demo para revisar la interfaz en el navegador, sin login ni red:
+      `flutter run -d chrome -t lib/demo/main_demo.dart`
+- [x] Dirección visual «Viva»: fuente Outfit incluida en la app, teal de marca,
+      un color por tipo de evento
+- [x] Home: cabecera con los números del periodo, accesos directos a MRs,
+      ramas y proyectos, y actividad agrupada por día
+- [x] Tema, licencias y cerrar sesión, en una hoja que se abre desde el avatar
+- [x] Las etiquetas (tags) nuevas ya no se anuncian como ramas
+- [x] Textos del framework en español (`flutter_localizations`) y plurales
+      bien concordados
+- [ ] Revisar en el teléfono y ajustar lo que salga
+
+### Fase 6 — Beta por APK
+
+Validar con usuarios reales antes de pagar Play Console.
+
+- [ ] App OAuth de producción en un grupo de gitlab.com y su `client_id` en la
+      app. Va **antes** de repartir: la pantalla de autorización de GitLab
+      enseña quién creó la app, y los testers no deben autorizar la de dev
+- [ ] Versión `0.1.0+1`, descripción de `pubspec.yaml` y README reales
+- [ ] Versión visible dentro de la app, para saber qué APK tiene quien reporta
+- [ ] Firma de release propia (`key.properties` fuera de git). Con la de debug,
+      un APK solo actualiza a otro si ambos se compilaron en este PC
+- [ ] APK universal y canal de reparto
+- [ ] Buscar testers con otro perfil: revisores o asignados a MRs. La campana y
+      la lista de MRs "a revisar" nunca tienen datos con la cuenta del autor
+
+### Fase 7 — Publicación en Play
+
+- [ ] Cuenta de Play Console (25 USD, pago único)
+- [ ] Política de privacidad en una URL pública y formulario de seguridad de
+      datos. Es corta: no hay backend, todo va del móvil a GitLab
+- [ ] Prueba cerrada obligatoria para cuentas personales nuevas: **12 testers
+      inscritos durante 14 días seguidos**. Los de la beta son los candidatos
+- [ ] Ficha de la tienda: capturas y descripción, aclarando que es un cliente
+      no oficial de GitLab
+
 ---
 
-## Decisiones abiertas
+## Decisiones (2026-09-27)
 
-- **Instancias self-managed.** Hoy la URL es fija. Para una app pública es una
-  limitación real: mucha gente usa GitLab autoalojado. `GitlabClient.baseUrl`
-  está centralizado en un único punto a propósito, así que añadir una pantalla
-  de instancia es un cambio acotado. Decidir antes de publicar.
-- **Aplicación OAuth de producción.** La actual es "Merged (Dev)", personal. Una
-  app pública necesita la suya. El `client_id` viaja en el binario, lo cual es
-  correcto para un cliente público con PKCE.
+- **Solo gitlab.com en la v0.1.** Soportar instancias self-managed no es solo
+  cambiar `GitlabClient.baseUrl`: el `client_id` de OAuth pertenece a la
+  instancia donde se registró y no existe en las demás. Queda para la v0.2,
+  entrando con un Personal Access Token.
+- **App OAuth de producción en un grupo de gitlab.com**, no en una cuenta
+  concreta: si la cuenta dueña se desactiva, el login cae para todos. El
+  `client_id` viaja en el binario, lo cual es correcto para un cliente público
+  con PKCE. "Merged (Dev)" se queda para desarrollo.
+- **Solo español en la v0.1.** El inglés llega en la v0.2 con `gen-l10n`.
+- **Solo Android en la v0.1.** iOS requiere compilar en un Mac.
 
 ## Fuera de la v0.1
 
 Acciones de escritura (aprobar, comentar, marcar todos), issues, pipelines como
-sección propia, notificaciones push, búsqueda global.
+sección propia, notificaciones push, búsqueda global, instancias self-managed,
+inglés, iOS.
 
 ---
 

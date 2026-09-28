@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/gitlab_project.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 
 /// Proyectos donde el usuario es miembro.
 class ProjectsScreen extends ConsumerWidget {
@@ -39,7 +41,7 @@ class ProjectsScreen extends ConsumerWidget {
             onRefresh: () async => ref.refresh(projectsProvider.future),
             child: ListView.separated(
               itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(indent: 68),
               itemBuilder: (context, index) =>
                   _ProjectTile(project: items[index]),
             ),
@@ -68,16 +70,19 @@ class _ProjectTile extends StatelessWidget {
     final activity = project.lastActivityAt;
 
     return ListTile(
-      leading: CircleAvatar(
-        backgroundImage: project.avatarUrl != null
-            ? NetworkImage(project.avatarUrl!)
-            : null,
-        child: project.avatarUrl == null
-            ? Text(
-                project.name.isNotEmpty ? project.name[0].toUpperCase() : '?',
-              )
-            : null,
-      ),
+      leading: project.avatarUrl != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                project.avatarUrl!,
+                width: 38,
+                height: 38,
+                fit: BoxFit.cover,
+                // Avatar privado o sin red: mejor la inicial que un hueco.
+                errorBuilder: (_, _, _) => _letter(context),
+              ),
+            )
+          : _letter(context),
       title: Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [
@@ -89,8 +94,17 @@ class _ProjectTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall,
       ),
-      trailing: const Icon(Icons.open_in_new, size: 18),
+      trailing: Icon(
+        Icons.open_in_new,
+        size: 18,
+        color: theme.colorScheme.outline,
+      ),
       onTap: () => openInGitlab(context, project.webUrl),
     );
   }
+
+  Widget _letter(BuildContext context) => ToneIcon.letter(
+    letter: project.name.isNotEmpty ? project.name[0].toUpperCase() : '?',
+    tone: MergedColors.of(context).blue,
+  );
 }

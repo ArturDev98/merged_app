@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/merge_request_detail.dart';
 import '../../core/models/merge_request_summary.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/merge_request_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 
 /// Detalle de un merge request.
 ///
@@ -25,7 +27,8 @@ class MergeRequestDetailScreen extends ConsumerWidget {
     final ref_ = (projectId: mr.projectId, iid: mr.iid);
     final detail = ref.watch(mergeRequestDetailProvider(ref_));
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final colors = MergedColors.of(context);
+    final project = ref.watch(projectsByIdProvider)[mr.projectId];
 
     return Scaffold(
       appBar: AppBar(
@@ -44,31 +47,41 @@ class MergeRequestDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 32),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(mr.title, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 10),
+                  if (project != null)
+                    Text(
+                      project.nameWithNamespace,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Text(mr.title, style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _Chip(
+                      TonePill(
                         icon: mrStateIcon(mr),
                         label: mrStateLabel(mr),
-                        color: mrStateColor(mr, scheme),
+                        tone: mrStateTone(mr, colors),
                       ),
-                      _Chip(
+                      TonePill(
                         icon: Icons.call_split,
                         label: '${mr.sourceBranch} → ${mr.targetBranch}',
-                        color: scheme.outline,
+                        tone: colors.neutral,
                       ),
                       if (mr.userNotesCount > 0)
-                        _Chip(
+                        TonePill(
                           icon: Icons.mode_comment_outlined,
-                          label: '${mr.userNotesCount} comentarios',
-                          color: scheme.outline,
+                          label: mr.userNotesCount == 1
+                              ? '1 comentario'
+                              : '${mr.userNotesCount} comentarios',
+                          tone: colors.neutral,
                         ),
                     ],
                   ),
@@ -104,7 +117,7 @@ class _DetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final colors = MergedColors.of(context);
     final pipeline = detail.headPipeline;
     final mergeStatus = mergeStatusLabel(detail.detailedMergeStatus);
     final description = detail.description?.trim();
@@ -114,9 +127,9 @@ class _DetailBody extends StatelessWidget {
       children: [
         if (pipeline != null)
           ListTile(
-            leading: Icon(
-              pipelineIcon(pipeline.status),
-              color: pipelineColor(pipeline.status, scheme),
+            leading: ToneIcon(
+              icon: pipelineIcon(pipeline.status),
+              tone: pipelineTone(pipeline.status, colors),
             ),
             title: Text(pipelineLabel(pipeline.status)),
             subtitle: Text(
@@ -127,7 +140,11 @@ class _DetailBody extends StatelessWidget {
               ].join(' · '),
             ),
             trailing: pipeline.webUrl != null
-                ? const Icon(Icons.open_in_new, size: 18)
+                ? Icon(
+                    Icons.open_in_new,
+                    size: 18,
+                    color: theme.colorScheme.outline,
+                  )
                 : null,
             onTap: pipeline.webUrl != null
                 ? () => openInGitlab(context, pipeline.webUrl)
@@ -137,7 +154,10 @@ class _DetailBody extends StatelessWidget {
           // Distinguir "sin CI" de "no lo sabemos" evita que el usuario piense
           // que la app no lo está mostrando.
           ListTile(
-            leading: Icon(Icons.remove_circle_outline, color: scheme.outline),
+            leading: ToneIcon(
+              icon: Icons.remove_circle_outline,
+              tone: colors.neutral,
+            ),
             title: const Text('Sin pipeline'),
             subtitle: const Text(
               'Este merge request no tiene ninguna ejecución de CI.',
@@ -145,60 +165,37 @@ class _DetailBody extends StatelessWidget {
           ),
         if (mergeStatus != null)
           ListTile(
-            leading: Icon(Icons.rule, color: scheme.outline),
+            leading: ToneIcon(
+              icon: Icons.rule,
+              tone: mergeStatusTone(detail.detailedMergeStatus, colors),
+            ),
             title: Text(mergeStatus),
           ),
         if (detail.upvotes > 0 || detail.downvotes > 0)
           ListTile(
-            leading: Icon(Icons.thumbs_up_down_outlined, color: scheme.outline),
+            leading: ToneIcon(
+              icon: Icons.thumbs_up_down_outlined,
+              tone: colors.neutral,
+            ),
             title: Text('${detail.upvotes} 👍 · ${detail.downvotes} 👎'),
           ),
         if (description != null && description.isNotEmpty) ...[
-          const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
             child: Text('Descripción', style: theme.textTheme.titleSmall),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(description, style: theme.textTheme.bodySmall),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(description, style: theme.textTheme.bodyMedium),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.label, required this.color});
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              label,
-              style: theme.textTheme.labelSmall,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

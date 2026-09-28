@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/activity_event.dart';
 import '../../core/providers.dart';
+import '../../core/theme/app_theme.dart';
+import '../../shared/activity_labels.dart';
 import '../../shared/open_in_gitlab.dart';
 import '../../shared/relative_time.dart';
 import '../../shared/state_views.dart';
+import '../../shared/tone_icon.dart';
 
 /// Detalle de un push, con sus commits reales.
 ///
@@ -40,24 +43,41 @@ class PushDetailScreen extends ConsumerWidget {
       body: ListView(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  push?.ref ?? '(sin rama)',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${event.actionName} · ${relativeTime(event.createdAt)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
+                Row(
+                  children: [
+                    ToneIcon(
+                      icon: activityIcon(event),
+                      tone: activityTone(event, MergedColors.of(context)),
+                      size: 44,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            push?.ref ?? '(sin rama)',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                          Text(
+                            '${describeActivity(event)} · '
+                            '${relativeTime(event.createdAt)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 if (canExpand && (push.needsBaseFallback))
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       'Rama nueva · comparada con $base',
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -132,15 +152,29 @@ class _CommitList extends ConsumerWidget {
           children: [
             for (final commit in list)
               ListTile(
-                leading: const Icon(Icons.commit, size: 20),
+                leading: ToneIcon(
+                  icon: Icons.commit,
+                  tone: MergedColors.of(context).neutral,
+                ),
                 title: Text(
                   commit.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  '${commit.shortId} · ${commit.authorName} · '
-                  '${relativeTime(commit.createdAt)}',
+                subtitle: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: commit.shortId,
+                        style: const TextStyle(fontFamily: 'monospace'),
+                      ),
+                      TextSpan(
+                        text:
+                            ' · ${commit.authorName} · '
+                            '${relativeTime(commit.createdAt)}',
+                      ),
+                    ],
+                  ),
                 ),
                 onTap: commit.webUrl == null
                     ? null

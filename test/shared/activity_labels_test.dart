@@ -49,6 +49,21 @@ void main() {
       expect(describeActivity(empujado), 'Hiciste push');
     });
 
+    test('una etiqueta nueva no se presenta como rama', () {
+      final etiqueta = _event({
+        'action_name': 'pushed new',
+        'push_data': {
+          'action': 'created',
+          'ref_type': 'tag',
+          'ref': 'v2.3.0',
+          'commit_count': 0,
+        },
+      });
+
+      expect(describeActivity(etiqueta), 'Creaste la etiqueta');
+      expect(etiqueta.pushData!.createsBranch, isFalse);
+    });
+
     test('nombra el tipo de objeto al abrirlo', () {
       final event = _event({
         'action_name': 'opened',
