@@ -227,7 +227,7 @@ Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
       revisar, sin repetir, y abre la pestaña que tenga algo. Solo contaba los
       propios y un MR asignado dejaba el contador en 0
 
-### Fase 7 — Aprobar merge requests
+### Fase 7 — Aprobar merge requests — ✅ completada
 
 - [x] Scope `api` en lugar de `read_api`: añadido a "Merged (Dev)" en GitLab
       el 2026-09-28 y pedido en `AuthService`. Una sesión guardada con otros
@@ -243,7 +243,8 @@ Un visor de diffs compartido por las tres superficies. Todo con `read_api`.
       a la sesión, el login no pide nada y la sesión caducada se reconoce
 - [x] Reintentar enseña el cargando en todas las pantallas, y cerrar sesión
       borra lo guardado para ver sin conexión
-- [ ] Probar con un MR real asignado por un compañero (el !621)
+- [x] Validada en el teléfono el 2026-09-28: aprobar y quitar la aprobación
+      del !621, y todo carga a la primera tras iniciar sesión
 
 ### Fase 8 — Detalle de proyecto
 
